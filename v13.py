@@ -363,6 +363,8 @@ def _internal_test_predict_best_param(area_id,
 
 def _internal_test(area_id):
     prefix = area_id_to_prefix(area_id)
+    param = _get_model_parameter(area_id)
+    min_th = param['min_poly_area']
     y_pred = _internal_test_predict_best_param(area_id, save_pred=False)
 
     # Postprocessing phase
@@ -408,6 +410,7 @@ def _internal_test(area_id):
                     image_id,
                     -1,
                     "POLYGON EMPTY"))
+    logger.info('finished writing result to {}'.format(fn_out))
 
 
 def _internal_validate_predict_best_param(area_id,
@@ -1680,8 +1683,9 @@ def testmerge():
 
 
 @cli.command()
-@click.argument('area_id', type=int)
-def testproc(area_id):
+@click.argument('datapath', type=str)
+def testproc(datapath):
+    area_id = directory_name_to_area_id(datapath)
     prefix = area_id_to_prefix(area_id)
     logger.info(">>>> Test proc for {}".format(prefix))
 

@@ -620,14 +620,15 @@ def preproc_test(datapath):
         prefix=prefix)).exists()
 
     # Image HDF5 store (MUL)
-    # if Path(FMT_TEST_MUL_STORE.format(prefix)).exists():
-    #     logger.info("Generate TEST MUL_STORE (test) ... skip")
-    # else:
-    #     logger.info("Generate TEST MUL_STORE (test)")
-    #     prep_mul_image_store_test(area_id, datapath)
+    if Path(FMT_TEST_MUL_STORE.format(prefix)).exists():
+        logger.info("Generate TEST MUL_STORE (test) ... skip")
+    else:
+        logger.info("Generate TEST MUL_STORE (test)")
+        prep_mul_image_store_test(area_id, datapath)
 
     # always generate it!
-    prep_mul_image_store_test(area_id, datapath)
+    # prep_mul_image_store_test(area_id, datapath)
+
     logger.info("preproc_test for {} ... done".format(prefix))
 
 

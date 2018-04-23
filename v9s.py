@@ -1136,6 +1136,7 @@ def _internal_test(area_id, enable_tqdm=False):
                     image_id,
                     -1,
                     "POLYGON EMPTY"))
+    logger.info('finished writing result to {}'.format(fn_out))
 
 
 def validate_score(area_id):

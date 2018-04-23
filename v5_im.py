@@ -832,35 +832,35 @@ def preproc_test(datapath):
     logger.info("preproc_test for {}".format(prefix))
 
     # Imagelist
-    # if Path(FMT_TEST_IMAGELIST_PATH.format(prefix=prefix)).exists():
-    #     logger.info("Generate TEST IMAGELIST for inference ... skip")
-    # else:
-    #     logger.info("Generate TEST IMAGELIST for inference")
-    #     prep_test_imagelist(area_id, datapath)
+    if Path(FMT_TEST_IMAGELIST_PATH.format(prefix=prefix)).exists():
+        logger.info("Generate TEST IMAGELIST for inference ... skip")
+    else:
+        logger.info("Generate TEST IMAGELIST for inference")
+        prep_test_imagelist(area_id, datapath)
 
     # Image HDF5 store (RGB)
-    # if Path(FMT_TEST_IM_STORE.format(prefix)).exists():
-    #     logger.info("Generate RGB_STORE (test) ... skip")
-    # else:
-    #     logger.info("Generate RGB_STORE (test)")
-    #     prep_rgb_image_store_test(area_id, datapath)
+    if Path(FMT_TEST_IM_STORE.format(prefix)).exists():
+        logger.info("Generate RGB_STORE (test) ... skip")
+    else:
+        logger.info("Generate RGB_STORE (test)")
+        prep_rgb_image_store_test(area_id, datapath)
 
-    # # Image HDF5 store (MUL)
-    # if Path(FMT_TEST_MUL_STORE.format(prefix)).exists():
-    #     logger.info("Generate MUL_STORE (test) ... skip")
-    # else:
-    #     logger.info("Generate MUL_STORE (test)")
-    #     prep_mul_image_store_test(area_id, datapath)
+    # Image HDF5 store (MUL)
+    if Path(FMT_TEST_MUL_STORE.format(prefix)).exists():
+        logger.info("Generate MUL_STORE (test) ... skip")
+    else:
+        logger.info("Generate MUL_STORE (test)")
+        prep_mul_image_store_test(area_id, datapath)
 
     # always generate it!
-    logger.info("Generate TEST IMAGELIST for inference")
-    prep_test_imagelist(area_id, datapath)
+    # logger.info("Generate TEST IMAGELIST for inference")
+    # prep_test_imagelist(area_id, datapath)
 
-    logger.info("Generate RGB_STORE (test)")
-    prep_rgb_image_store_test(area_id, datapath)
+    # logger.info("Generate RGB_STORE (test)")
+    # prep_rgb_image_store_test(area_id, datapath)
 
-    logger.info("Generate MUL_STORE (test)")
-    prep_mul_image_store_test(area_id, datapath)
+    # logger.info("Generate MUL_STORE (test)")
+    # prep_mul_image_store_test(area_id, datapath)
 
     logger.info("preproc_test for {} ... done".format(prefix))
 
