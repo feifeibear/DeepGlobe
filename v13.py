@@ -1797,6 +1797,22 @@ def validate(datapath):
 
     logger.info("Instantiate U-Net model")
     model = get_unet()
+
+    # load weights here
+    is_load_weights = True
+
+    if is_load_weights:
+      start_epoch = 34
+      stop_epoch  = 75
+      fn = FMT_TESTPRED_PATH.format(prefix)
+      fn_model = FMT_VALMODEL_PATH.format(prefix + '_{epoch:02d}')
+      fn_model = fn_model.format(epoch=start_epoch)
+      model.load_weights(fn_model)
+      logger.info('loading epoch: {}'.format(start_epoch))
+    else:
+      start_epoch = 1
+      stop_epoch  = 35
+
     model_checkpoint = ModelCheckpoint(
         FMT_VALMODEL_PATH.format(prefix + "_{epoch:02d}"),
         monitor='val_jaccard_coef_int',
@@ -1814,7 +1830,8 @@ def validate(datapath):
     model.fit_generator(
         generate_valtrain_batch(area_id, batch_size=FIT_BATCH_SIZE, immean=X_mean),
         samples_per_epoch=len(df_train) * 9,
-        nb_epoch=35,
+        initial_epoch=start_epoch,
+        nb_epoch=stop_epoch,
         verbose=1,
         validation_data=(X_val, y_val),
         callbacks=[model_checkpoint, model_earlystop, model_history])
