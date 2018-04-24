@@ -1730,8 +1730,7 @@ def evalfscore(datapath):
     df_hist.loc[:, 'epoch'] = list(range(1, len(df_hist) + 1))
 
     rows = []
-    for zero_base_epoch in range(0, len(df_hist)):
-        absolute_epoch = zero_base_epoch + (START_EPOCH if IS_RESTART else 0)
+    for zero_base_epoch in range(START_EPOCH if IS_RESTART else 0, len(df_hist)):
         logger.info(">>> Epoch: {}".format(absolute_epoch))
 
         _internal_validate_fscore_wo_pred_file(
