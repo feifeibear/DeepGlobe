@@ -1818,7 +1818,7 @@ def validate(datapath):
       model.load_weights(fn_model)
       logger.info('loading epoch: {}'.format(start_epoch))
     else:
-      start_epoch = 1
+      start_epoch = 0
       stop_epoch  = 35
 
     model_checkpoint = ModelCheckpoint(
