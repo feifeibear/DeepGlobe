@@ -39,9 +39,14 @@ import shapely.wkt
 import shapely.ops
 import shapely.geometry
 
-FIT_BATCH_SIZE = 32
-PRED_BATCH_SIZE = 96
+IS_RESTART=False
+START_EPOCH=34
+STOP_EPOCH=75
 
+FIT_BATCH_SIZE = 32
+PRED_BATCH_SIZE = 108
+
+# ---------------------------------------------------------
 MODEL_NAME = 'v13'
 ORIGINAL_SIZE = 650
 INPUT_SIZE = 256
@@ -1719,37 +1724,43 @@ def evalfscore(datapath):
     prefix = area_id_to_prefix(area_id)
     logger.info("Evaluate fscore on validation set: {}".format(prefix))
 
+
     # for each epoch
-    # if not Path(FMT_VALMODEL_EVALHIST.format(prefix)).exists():
-    if True:
-        df_hist = pd.read_csv(FMT_VALMODEL_HIST.format(prefix))
-        df_hist.loc[:, 'epoch'] = list(range(1, len(df_hist) + 1))
+    df_hist = pd.read_csv(FMT_VALMODEL_HIST.format(prefix))
+    df_hist.loc[:, 'epoch'] = list(range(1, len(df_hist) + 1))
 
-        rows = []
-        for zero_base_epoch in range(0, len(df_hist)):
-            logger.info(">>> Epoch: {}".format(zero_base_epoch))
+    rows = []
+    for zero_base_epoch in range(0, len(df_hist)):
+        absolute_epoch = zero_base_epoch + (START_EPOCH if IS_RESTART else 0)
+        logger.info(">>> Epoch: {}".format(absolute_epoch))
 
-            _internal_validate_fscore_wo_pred_file(
-                area_id,
-                epoch=zero_base_epoch,
-                enable_tqdm=True,
-                min_th=MIN_POLYGON_AREA)
-            evaluate_record = _calc_fscore_per_aoi(area_id)
-            evaluate_record['zero_base_epoch'] = zero_base_epoch
-            evaluate_record['min_area_th'] = MIN_POLYGON_AREA
-            evaluate_record['area_id'] = area_id
-            logger.info("\n" + json.dumps(evaluate_record, indent=4))
-            rows.append(evaluate_record)
+        _internal_validate_fscore_wo_pred_file(
+            area_id,
+            epoch=absolute_epoch,
+            enable_tqdm=True,
+            min_th=MIN_POLYGON_AREA)
+        evaluate_record = _calc_fscore_per_aoi(area_id)
+        evaluate_record['zero_base_epoch'] = absolute_epoch
+        evaluate_record['min_area_th'] = MIN_POLYGON_AREA
+        evaluate_record['area_id'] = area_id
+        logger.info("\n" + json.dumps(evaluate_record, indent=4))
+        rows.append(evaluate_record)
 
-        pd.DataFrame(rows).to_csv(
-            FMT_VALMODEL_EVALHIST.format(prefix),
-            index=False)
+    if IS_RESTART:
+      pd.DataFrame(rows).to_csv(
+          FMT_VALMODEL_EVALHIST.format(prefix),
+          index=False, mode='a', header=False)
+    else:
+      pd.DataFrame(rows).to_csv(
+          FMT_VALMODEL_EVALHIST.format(prefix),
+          index=False)
 
     # find best min-poly-threshold
     df_evalhist = pd.read_csv(FMT_VALMODEL_EVALHIST.format(prefix))
     best_row = df_evalhist.sort_values(by='fscore', ascending=False).iloc[0]
     best_epoch = int(best_row.zero_base_epoch)
     best_fscore = best_row.fscore
+    logger.info('best_epoch: {}'.format(best_epoch))
 
     # optimize min area th
     rows = []
@@ -1798,15 +1809,12 @@ def validate(datapath):
     logger.info("Instantiate U-Net model")
     model = get_unet()
 
-    # load weights here
-    is_load_weights = True
-
-    if is_load_weights:
-      start_epoch = 34
-      stop_epoch  = 75
+    if IS_RESTART:
+      start_epoch = START_EPOCH
+      stop_epoch  = STOP_EPOCH
       fn = FMT_TESTPRED_PATH.format(prefix)
       fn_model = FMT_VALMODEL_PATH.format(prefix + '_{epoch:02d}')
-      fn_model = fn_model.format(epoch=start_epoch)
+      fn_model = fn_model.format(epoch=start_epoch - 1)
       model.load_weights(fn_model)
       logger.info('loading epoch: {}'.format(start_epoch))
     else:
