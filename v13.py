@@ -44,7 +44,7 @@ START_EPOCH=34
 STOP_EPOCH=75
 
 FIT_BATCH_SIZE = 32
-PRED_BATCH_SIZE = 108
+PRED_BATCH_SIZE = 96
 
 # ---------------------------------------------------------
 MODEL_NAME = 'v13'
