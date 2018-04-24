@@ -6,6 +6,7 @@ export CUDA_VISIBLE_DEVICES=5
 export IS_RESTART=0
 export START_EPOCH=0
 export STOP_EPOCH=75
+export FIT_BATCH_SIZE=32
 export PROJ_BASE_PATH="/root"
 
 MODEL="AOI_3_Paris"

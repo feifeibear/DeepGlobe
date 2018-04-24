@@ -43,7 +43,7 @@ IS_RESTART  = True if os.environ['IS_RESTART'] == '1' else False
 START_EPOCH = int(os.environ['START_EPOCH']) if IS_RESTART else 0
 STOP_EPOCH  = int(os.environ['STOP_EPOCH'])
 
-FIT_BATCH_SIZE = 32
+FIT_BATCH_SIZE = 32 if os.environ['FIT_BATCH_SIZE'] == '' else int(os.environ['FIT_BATCH_SIZE'])
 PRED_BATCH_SIZE = 96
 
 # ---------------------------------------------------------
@@ -1830,6 +1830,7 @@ def validate(datapath):
         mode='max')
     model_history = History()
 
+    logger.info('FIT_BATCH_SIZE={}'.format(FIT_BATCH_SIZE))
     df_train = pd.read_csv(FMT_VALTRAIN_IMAGELIST_PATH.format(
         prefix=prefix))
     logger.info("Fit")
