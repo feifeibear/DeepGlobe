@@ -1731,15 +1731,15 @@ def evalfscore(datapath):
 
     rows = []
     for zero_base_epoch in range(START_EPOCH if IS_RESTART else 0, len(df_hist)):
-        logger.info(">>> Epoch: {}".format(absolute_epoch))
+        logger.info(">>> Epoch: {}".format(zero_base_epoch))
 
         _internal_validate_fscore_wo_pred_file(
             area_id,
-            epoch=absolute_epoch,
+            epoch=zero_base_epoch,
             enable_tqdm=True,
             min_th=MIN_POLYGON_AREA)
         evaluate_record = _calc_fscore_per_aoi(area_id)
-        evaluate_record['zero_base_epoch'] = absolute_epoch
+        evaluate_record['zero_base_epoch'] = zero_base_epoch
         evaluate_record['min_area_th'] = MIN_POLYGON_AREA
         evaluate_record['area_id'] = area_id
         logger.info("\n" + json.dumps(evaluate_record, indent=4))
