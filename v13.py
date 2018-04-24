@@ -39,9 +39,9 @@ import shapely.wkt
 import shapely.ops
 import shapely.geometry
 
-IS_RESTART  = False
-START_EPOCH = 35 if IS_RESTART else 0
-STOP_EPOCH  = 75
+IS_RESTART  = True if os.environ['IS_RESTART'] == '1' else False
+START_EPOCH = int(os.environ['START_EPOCH']) if IS_RESTART else 0
+STOP_EPOCH  = int(os.environ['STOP_EPOCH'])
 
 FIT_BATCH_SIZE = 32
 PRED_BATCH_SIZE = 96
@@ -1816,7 +1816,8 @@ def validate(datapath):
       fn_model = FMT_VALMODEL_PATH.format(prefix + '_{epoch:02d}')
       fn_model = fn_model.format(epoch=start_epoch - 1)
       model.load_weights(fn_model)
-      logger.info('loading epoch: {}'.format(start_epoch))
+      logger.info('start from epoch {}'.format(start_epoch))
+      logger.info('load weights from epoch: {}'.format(start_epoch - 1))
 
     model_checkpoint = ModelCheckpoint(
         FMT_VALMODEL_PATH.format(prefix + "_{epoch:02d}"),
