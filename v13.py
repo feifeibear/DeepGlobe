@@ -39,9 +39,9 @@ import shapely.wkt
 import shapely.ops
 import shapely.geometry
 
-IS_RESTART=False
-START_EPOCH=34
-STOP_EPOCH=75
+IS_RESTART  = False
+START_EPOCH = 35 if IS_RESTART else 0
+STOP_EPOCH  = 75
 
 FIT_BATCH_SIZE = 32
 PRED_BATCH_SIZE = 96
@@ -1809,17 +1809,15 @@ def validate(datapath):
     logger.info("Instantiate U-Net model")
     model = get_unet()
 
+    start_epoch = START_EPOCH
+    stop_epoch  = STOP_EPOCH
+
     if IS_RESTART:
-      start_epoch = START_EPOCH
-      stop_epoch  = STOP_EPOCH
       fn = FMT_TESTPRED_PATH.format(prefix)
       fn_model = FMT_VALMODEL_PATH.format(prefix + '_{epoch:02d}')
       fn_model = fn_model.format(epoch=start_epoch - 1)
       model.load_weights(fn_model)
       logger.info('loading epoch: {}'.format(start_epoch))
-    else:
-      start_epoch = 0
-      stop_epoch  = 35
 
     model_checkpoint = ModelCheckpoint(
         FMT_VALMODEL_PATH.format(prefix + "_{epoch:02d}"),
@@ -1847,8 +1845,13 @@ def validate(datapath):
     model.save_weights(FMT_VALMODEL_LAST_PATH.format(prefix))
 
     # Save evaluation history
-    pd.DataFrame(model_history.history).to_csv(
-        FMT_VALMODEL_HIST.format(prefix), index=False)
+    if IS_RESTART:
+      pd.DataFrame(model_history.history).to_csv(
+          FMT_VALMODEL_HIST.format(prefix), index=False, mode='a', header=False)
+    else:
+      pd.DataFrame(model_history.history).to_csv(
+          FMT_VALMODEL_HIST.format(prefix), index=False)
+
     logger.info(">> validate sub-command: {} ... Done".format(prefix))
 
 
