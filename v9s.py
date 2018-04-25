@@ -40,8 +40,8 @@ import shapely.wkt
 import shapely.ops
 import shapely.geometry
 
-FIT_BATCH_SIZE = 32 # 32 originally
-PRED_BATCH_SIZE = 96
+FIT_BATCH_SIZE = 32 if os.environ['FIT_BATCH_SIZE'] == '' else int(os.environ['FIT_BATCH_SIZE'])
+PRED_BATCH_SIZE = 64 if os.environ['PRED_BATCH_SIZE'] == '' else int(os.environ['PRED_BATCH_SIZE'])
 
 MODEL_NAME = 'v9s'
 ORIGINAL_SIZE = 650

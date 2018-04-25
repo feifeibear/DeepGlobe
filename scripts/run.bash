@@ -4,13 +4,14 @@
 
 export CUDA_VISIBLE_DEVICES=3
 
-export RUN_TRAIN=0
+export RUN_TRAIN=1
 export RUN_TEST=1
 
 export IS_RESTART=0
 export START_EPOCH=0
 export STOP_EPOCH=75
-export FIT_BATCH_SIZE=2
+export FIT_BATCH_SIZE=32
+export PRED_BATCH_SIZE=64
 
 export PROJ_BASE_PATH="/root"
 

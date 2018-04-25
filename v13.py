@@ -44,7 +44,7 @@ START_EPOCH = int(os.environ['START_EPOCH']) if IS_RESTART else 0
 STOP_EPOCH  = int(os.environ['STOP_EPOCH'])
 
 FIT_BATCH_SIZE = 32 if os.environ['FIT_BATCH_SIZE'] == '' else int(os.environ['FIT_BATCH_SIZE'])
-PRED_BATCH_SIZE = 96
+PRED_BATCH_SIZE = 64 if os.environ['PRED_BATCH_SIZE'] == '' else int(os.environ['PRED_BATCH_SIZE'])
 
 # ---------------------------------------------------------
 MODEL_NAME = 'v13'
