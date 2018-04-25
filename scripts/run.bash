@@ -70,12 +70,13 @@ if [[ $RUN_TEST -eq 1 ]]; then
   python $PROJ_BASE_PATH/code/v12_im.py preproc_test $TEST_PATH || exit 1
 
   echo ">>> INFERENCE STEP"
+  echo ">>>" python v17.py testproc $TEST_PATH
+  python $PROJ_BASE_PATH/code/v17.py testproc $TEST_PATH || exit 1
+
+  echo ">>> INFERENCE v9s and v13 after v17"
   echo ">>>" python v9s.py testproc $TEST_PATH
   python $PROJ_BASE_PATH/code/v9s.py testproc $TEST_PATH || exit 1
 
   echo ">>>" python v13.py testproc $TEST_PATH
   python $PROJ_BASE_PATH/code/v13.py testproc $TEST_PATH || exit 1
-
-  echo ">>>" python v17.py testproc $TEST_PATH
-  python $PROJ_BASE_PATH/code/v17.py testproc $TEST_PATH || exit 1
 fi
