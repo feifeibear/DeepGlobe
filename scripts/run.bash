@@ -3,6 +3,7 @@
 # set -e
 
 export CUDA_VISIBLE_DEVICES=3
+export MODEL="AOI_3_Paris"
 
 export RUN_TRAIN=1
 export RUN_TEST=1
@@ -13,9 +14,8 @@ export STOP_EPOCH=75
 export FIT_BATCH_SIZE=32
 export PRED_BATCH_SIZE=64
 
+#-=-=-=-=-=-=-=-= No need to modify -=-=-=-=-=-=-=-=-=--=-=-
 export PROJ_BASE_PATH="/root"
-
-MODEL="AOI_3_Paris"
 TRAIN_PATH=$PROJ_BASE_PATH/data/train/${MODEL}_Train
 TEST_PATH=$PROJ_BASE_PATH/data/test/${MODEL}_Test_public
 
