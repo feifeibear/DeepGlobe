@@ -37,8 +37,9 @@ import shapely.wkt
 import shapely.ops
 import shapely.geometry
 import layers_builder as layers
-from deeplab import Deeplabv3
-from linknet import LinkNet
+from models.deeplab import Deeplabv3
+from models.linknet import LinkNet
+from models.FCN32 import FCN32
 
 FIT_BATCH_SIZE = 32 if os.environ['FIT_BATCH_SIZE'] == '' else int(os.environ['FIT_BATCH_SIZE'])
 PRED_BATCH_SIZE = 64 if os.environ['PRED_BATCH_SIZE'] == '' else int(os.environ['PRED_BATCH_SIZE'])
@@ -736,6 +737,9 @@ def get_deeplab():
 
 def get_linknet():
     return LinkNet(classes=1)
+
+def get_fcn32():
+    return FCN32(n_classes=1)
 
 def get_unet():
 #    inputs = Input((8, img_rows, img_cols))
@@ -1748,9 +1752,18 @@ def validate(datapath):
     X_trn, y_trn = _get_valtrain_mul_data(area_id)
     X_trn = X_trn - X_mean
 
-    #model = get_unet()
-    # model = get_linknet()
-    model = get_deeplab()
+    use_channel_last = True
+    model_name = "deeplab"
+    if model_name == "unet":
+        model = get_unet()
+    elif model_name == "linknet":
+        model = get_linknet()
+    elif model_name == "deeplab":
+        model = get_deeplab()
+    elif model_name == "fcn32":
+        # TODO failed 
+        model = get_fcn32()
+        use_channel_last = False
 
     # load weights here
     is_load_weights = False
@@ -1780,28 +1793,25 @@ def validate(datapath):
     df_train = pd.read_csv(FMT_VALTRAIN_IMAGELIST_PATH.format(prefix=prefix))
     logger.info("Fit")
 
-    print('X_trn.shape : ', X_trn.shape)
-    print('y_trn.shape : ', y_trn.shape)
-    print('X_val.shape : ', X_val.shape)
-    print('y_val.shape : ', y_val.shape)
-    print(' ----before---- ')
 
-    X_trn = np.swapaxes(X_trn, 1, 3)
-    X_trn = np.swapaxes(X_trn, 1, 2)
-
-    y_trn = np.swapaxes(y_trn, 1, 3)
-    y_trn = np.swapaxes(y_trn, 1, 2)
-
-    X_val = np.swapaxes(X_val, 1, 3)
-    X_val = np.swapaxes(X_val, 1, 2)
-
-    y_val = np.swapaxes(y_val, 1, 3)
-    y_val = np.swapaxes(y_val, 1, 2)
-
-    print('X_trn.shape : ', X_trn.shape)
-    print('y_trn.shape : ', y_trn.shape)
-    print('X_val.shape : ', X_val.shape)
-    print('y_val.shape : ', y_val.shape)
+    if use_channel_last:
+        print('X_trn.shape : ', X_trn.shape)
+        print('y_trn.shape : ', y_trn.shape)
+        print('X_val.shape : ', X_val.shape)
+        print('y_val.shape : ', y_val.shape)
+        print(' ----before---- ')
+        X_trn = np.swapaxes(X_trn, 1, 3)
+        X_trn = np.swapaxes(X_trn, 1, 2)
+        y_trn = np.swapaxes(y_trn, 1, 3)
+        y_trn = np.swapaxes(y_trn, 1, 2)
+        X_val = np.swapaxes(X_val, 1, 3)
+        X_val = np.swapaxes(X_val, 1, 2)
+        y_val = np.swapaxes(y_val, 1, 3)
+        y_val = np.swapaxes(y_val, 1, 2)
+        print('X_trn.shape : ', X_trn.shape)
+        print('y_trn.shape : ', y_trn.shape)
+        print('X_val.shape : ', X_val.shape)
+        print('y_val.shape : ', y_val.shape)
 
     model.fit(
         X_trn, y_trn,
