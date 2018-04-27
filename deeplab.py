@@ -233,7 +233,7 @@ def jaccard_coef_int(y_true, y_pred):
 
 
 
-def Deeplabv3(weights='pascal_voc', input_tensor=None, input_shape=(256, 256, 8), classes=2, OS=16):
+def Deeplabv3(weights='pascal_voc', input_tensor=None, input_shape=(256, 256, 8), classes=1, OS=8):
     """ Instantiates the Deeplabv3+ architecture
 
     Optionally loads weights pre-trained
@@ -417,4 +417,4 @@ def preprocess_input(x):
     return imagenet_utils.preprocess_input(x, mode='tf')
 
 if __name__ == '__main__':
-    Deeplabv3(weights=None, input_tensor=None, input_shape=(256, 256, 1), classes=2, OS=16)
+    Deeplabv3(weights=None, input_tensor=None, input_shape=(256, 256, 1), classes=1, OS=16)

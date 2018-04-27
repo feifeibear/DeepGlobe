@@ -13,8 +13,11 @@ from keras.optimizers import Adam
 
 def jaccard_coef(y_true, y_pred):
     smooth = 1e-12
-    intersection = K.sum(y_true * y_pred, axis=[0, -1, -2])
-    sum_ = K.sum(y_true + y_pred, axis=[0, -1, -2])
+    # intersection = K.sum(y_true * y_pred, axis=[0, -1, -2])
+    # sum_ = K.sum(y_true + y_pred, axis=[0, -1, -2])
+
+    intersection = K.sum(y_true * y_pred, axis=[0, -2, -3])
+    sum_ = K.sum(y_true + y_pred, axis=[0, -2, -3])
     jac = (intersection + smooth) / (sum_ - intersection + smooth)
     return K.mean(jac)
 
@@ -22,8 +25,10 @@ def jaccard_coef(y_true, y_pred):
 def jaccard_coef_int(y_true, y_pred):
     smooth = 1e-12
     y_pred_pos = K.round(K.clip(y_pred, 0, 1))
-    intersection = K.sum(y_true * y_pred_pos, axis=[0, -1, -2])
-    sum_ = K.sum(y_true + y_pred_pos, axis=[0, -1, -2])
+    #intersection = K.sum(y_true * y_pred_pos, axis=[0, -1, -2])
+    #sum_ = K.sum(y_true + y_pred_pos, axis=[0, -1, -2])
+    intersection = K.sum(y_true * y_pred_pos, axis=[0, -2, -3])
+    sum_ = K.sum(y_true + y_pred_pos, axis=[0, -2, -3])
     jac = (intersection + smooth) / (sum_ - intersection + smooth)
     return K.mean(jac)
 
@@ -92,7 +97,7 @@ def decoder_block(input_tensor, m, n):
 
     return x
 
-def LinkNet(input_shape=(256, 256, 8), classes=2):
+def LinkNet(input_shape=(256, 256, 8), classes=1):
     inputs = Input(shape=input_shape)
 
     x = BatchNormalization()(inputs)

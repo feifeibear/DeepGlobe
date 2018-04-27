@@ -731,7 +731,8 @@ def __calc_mul_multiband_cut_threshold(area_id):
 #             activation='binary_crossentropy')
 
 def get_deeplab():
-    return Deeplabv3(weights=None, input_tensor=None, classes=1, OS=16)
+    #return Deeplabv3(weights=None, input_tensor=None, classes=1, OS=16)
+    return Deeplabv3(weights=None, input_tensor=None, classes=1, OS=8)
 
 def get_linknet():
     return LinkNet(classes=1)
@@ -840,8 +841,11 @@ def get_unet():
 
 def jaccard_coef(y_true, y_pred):
     smooth = 1e-12
-    intersection = K.sum(y_true * y_pred, axis=[0, -1, -2])
-    sum_ = K.sum(y_true + y_pred, axis=[0, -1, -2])
+    # fjr
+    #intersection = K.sum(y_true * y_pred, axis=[0, -1, -2])
+    intersection = K.sum(y_true * y_pred, axis=[0, -2, -3])
+    # sum_ = K.sum(y_true + y_pred, axis=[0, -1, -2])
+    sum_ = K.sum(y_true + y_pred, axis=[0, -2, -3])
     jac = (intersection + smooth) / (sum_ - intersection + smooth)
     return K.mean(jac)
 
@@ -849,8 +853,10 @@ def jaccard_coef(y_true, y_pred):
 def jaccard_coef_int(y_true, y_pred):
     smooth = 1e-12
     y_pred_pos = K.round(K.clip(y_pred, 0, 1))
-    intersection = K.sum(y_true * y_pred_pos, axis=[0, -1, -2])
-    sum_ = K.sum(y_true + y_pred_pos, axis=[0, -1, -2])
+    # intersection = K.sum(y_true * y_pred_pos, axis=[0, -1, -2])
+    intersection = K.sum(y_true * y_pred_pos, axis=[0, -2, -3])
+    # sum_ = K.sum(y_true + y_pred_pos, axis=[0, -1, -2])
+    sum_ = K.sum(y_true + y_pred_pos, axis=[0, -2, -3])
     jac = (intersection + smooth) / (sum_ - intersection + smooth)
     return K.mean(jac)
 
@@ -1743,7 +1749,7 @@ def validate(datapath):
     X_trn = X_trn - X_mean
 
     #model = get_unet()
-    #model = get_linknet()
+    # model = get_linknet()
     model = get_deeplab()
 
     # load weights here
