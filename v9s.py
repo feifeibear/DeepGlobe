@@ -25,12 +25,9 @@ import tables as tb
 import pandas as pd
 import numpy as np
 from keras.models import Model
-from keras.engine.topology import merge as merge_l
-from keras.layers import (
-    Input, Convolution2D, MaxPooling2D, UpSampling2D,
-    Reshape, core, Dropout,
-    Activation, BatchNormalization)
+from keras.layers import Input, concatenate, Conv2D, MaxPooling2D, Conv2DTranspose
 from keras.optimizers import Adam
+from keras.callbacks import ModelCheckpoint
 from keras.callbacks import ModelCheckpoint, EarlyStopping, History
 from keras import backend as K
 import skimage.transform
@@ -39,6 +36,9 @@ import rasterio.features
 import shapely.wkt
 import shapely.ops
 import shapely.geometry
+import layers_builder as layers
+from deeplab import Deeplabv3
+from linknet import LinkNet
 
 FIT_BATCH_SIZE = 32 if os.environ['FIT_BATCH_SIZE'] == '' else int(os.environ['FIT_BATCH_SIZE'])
 PRED_BATCH_SIZE = 64 if os.environ['PRED_BATCH_SIZE'] == '' else int(os.environ['PRED_BATCH_SIZE'])
@@ -106,7 +106,7 @@ FMT_MULMEAN = IMAGE_DIR + "/{}_mulmean.h5"
 
 # Model files
 FMT_VALMODEL_PATH = MODEL_DIR + "/{}_val_weights.h5"
-FMT_FULLMODEL_PATH = MODEL_DIR + "/{}_full_weights.h5"
+F473MT_FULLMODEL_PATH = MODEL_DIR + "/{}_full_weights.h5"
 FMT_VALMODEL_HIST = MODEL_DIR + "/{}_val_hist.csv"
 FMT_VALMODEL_EVALHIST = MODEL_DIR + "/{}_val_evalhist.csv"
 FMT_VALMODEL_EVALTHHIST = MODEL_DIR + "/{}_val_evalhist_th.csv"
@@ -720,53 +720,122 @@ def __calc_mul_multiband_cut_threshold(area_id):
     return band_cut_th
 
 
+# fjr add
+# def get_vggunet2():
+#     return Models.VGGUnet.VGGUnet2( n_classes = 2 ,  input_height=256, input_width=256, vgg_level=3)
+# 
+# def get_pspnet():
+#     return layers.build_pspnet(nb_classes=2,
+#             resnet_layers=50, # 101
+#             input_shape=[256, 256],
+#             activation='binary_crossentropy')
+
+def get_deeplab():
+    return Deeplabv3(weights=None, input_tensor=None, classes=1, OS=16)
+
+def get_linknet():
+    return LinkNet(classes=1)
+
 def get_unet():
-    conv_params = dict(activation='relu', border_mode='same')
-    merge_params = dict(mode='concat', concat_axis=1)
-    inputs = Input((8, 256, 256))
-    conv1 = Convolution2D(32, 3, 3, **conv_params)(inputs)
-    conv1 = Convolution2D(32, 3, 3, **conv_params)(conv1)
+#    inputs = Input((8, img_rows, img_cols))
+    # inputs = Input((8, 256, 256))
+    myaxis = 3
+    inputs = Input((256, 256, 8))
+    conv1 = Conv2D(32, (3, 3), activation='relu', padding='same')(inputs)
+    conv1 = Conv2D(32, (3, 3), activation='relu', padding='same')(conv1)
     pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 
-    conv2 = Convolution2D(64, 3, 3, **conv_params)(pool1)
-    conv2 = Convolution2D(64, 3, 3, **conv_params)(conv2)
+    conv2 = Conv2D(64, (3, 3), activation='relu', padding='same')(pool1)
+    conv2 = Conv2D(64, (3, 3), activation='relu', padding='same')(conv2)
     pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
 
-    conv3 = Convolution2D(128, 3, 3, **conv_params)(pool2)
-    conv3 = Convolution2D(128, 3, 3, **conv_params)(conv3)
+    conv3 = Conv2D(128, (3, 3), activation='relu', padding='same')(pool2)
+    conv3 = Conv2D(128, (3, 3), activation='relu', padding='same')(conv3)
     pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
 
-    conv4 = Convolution2D(256, 3, 3, **conv_params)(pool3)
-    conv4 = Convolution2D(256, 3, 3, **conv_params)(conv4)
+    conv4 = Conv2D(256, (3, 3), activation='relu', padding='same')(pool3)
+    conv4 = Conv2D(256, (3, 3), activation='relu', padding='same')(conv4)
     pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
 
-    conv5 = Convolution2D(512, 3, 3, **conv_params)(pool4)
-    conv5 = Convolution2D(512, 3, 3, **conv_params)(conv5)
+    conv5 = Conv2D(512, (3, 3), activation='relu', padding='same')(pool4)
+    conv5 = Conv2D(512, (3, 3), activation='relu', padding='same')(conv5)
 
-    up6 = merge_l([UpSampling2D(size=(2, 2))(conv5), conv4], **merge_params)
-    conv6 = Convolution2D(256, 3, 3, **conv_params)(up6)
-    conv6 = Convolution2D(256, 3, 3, **conv_params)(conv6)
+    up6 = concatenate([Conv2DTranspose(256, (2, 2), strides=(2, 2), padding='same')(conv5), conv4], axis=myaxis)
+    conv6 = Conv2D(256, (3, 3), activation='relu', padding='same')(up6)
+    conv6 = Conv2D(256, (3, 3), activation='relu', padding='same')(conv6)
 
-    up7 = merge_l([UpSampling2D(size=(2, 2))(conv6), conv3], **merge_params)
-    conv7 = Convolution2D(128, 3, 3, **conv_params)(up7)
-    conv7 = Convolution2D(128, 3, 3, **conv_params)(conv7)
+    up7 = concatenate([Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same')(conv6), conv3], axis=myaxis)
+    conv7 = Conv2D(128, (3, 3), activation='relu', padding='same')(up7)
+    conv7 = Conv2D(128, (3, 3), activation='relu', padding='same')(conv7)
 
-    up8 = merge_l([UpSampling2D(size=(2, 2))(conv7), conv2], **merge_params)
-    conv8 = Convolution2D(64, 3, 3, **conv_params)(up8)
-    conv8 = Convolution2D(64, 3, 3, **conv_params)(conv8)
+    up8 = concatenate([Conv2DTranspose(64, (2, 2), strides=(2, 2), padding='same')(conv7), conv2], axis=myaxis)
+    conv8 = Conv2D(64, (3, 3), activation='relu', padding='same')(up8)
+    conv8 = Conv2D(64, (3, 3), activation='relu', padding='same')(conv8)
 
-    up9 = merge_l([UpSampling2D(size=(2, 2))(conv8), conv1], **merge_params)
-    conv9 = Convolution2D(32, 3, 3, **conv_params)(up9)
-    conv9 = Convolution2D(32, 3, 3, **conv_params)(conv9)
+    up9 = concatenate([Conv2DTranspose(32, (2, 2), strides=(2, 2), padding='same')(conv8), conv1], axis=myaxis)
+    conv9 = Conv2D(32, (3, 3), activation='relu', padding='same')(up9)
+    conv9 = Conv2D(32, (3, 3), activation='relu', padding='same')(conv9)
 
-    conv10 = Convolution2D(1, 1, 1, activation='sigmoid')(conv9)
-    adam = Adam()
+    conv10 = Conv2D(1, (1, 1), activation='sigmoid')(conv9)
 
-    model = Model(input=inputs, output=conv10)
-    model.compile(optimizer=adam,
-                  loss='binary_crossentropy',
-                  metrics=['accuracy', jaccard_coef, jaccard_coef_int])
+    model = Model(inputs=[inputs], outputs=[conv10])
+
+    model.compile(optimizer=Adam(),
+                   loss='binary_crossentropy',
+                   metrics=['accuracy', jaccard_coef, jaccard_coef_int])
+
+#   model.compile(optimizer=Adam(lr=1e-5), loss=dice_coef_loss, metrics=[dice_coef])
+#                   metrics=['accuracy', jaccard_coef, jaccard_coef_int])
+
     return model
+
+# def get_unet():
+#     conv_params = dict(activation='relu', border_mode='same')
+#     merge_params = dict(mode='concat', concat_axis=1)
+#     inputs = Input((8, 256, 256))
+#     conv1 = Convolution2D(32, 3, 3, **conv_params)(inputs)
+#     conv1 = Convolution2D(32, 3, 3, **conv_params)(conv1)
+#     pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+# 
+#     conv2 = Convolution2D(64, 3, 3, **conv_params)(pool1)
+#     conv2 = Convolution2D(64, 3, 3, **conv_params)(conv2)
+#     pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
+# 
+#     conv3 = Convolution2D(128, 3, 3, **conv_params)(pool2)
+#     conv3 = Convolution2D(128, 3, 3, **conv_params)(conv3)
+#     pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
+# 
+#     conv4 = Convolution2D(256, 3, 3, **conv_params)(pool3)
+#     conv4 = Convolution2D(256, 3, 3, **conv_params)(conv4)
+#     pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
+# 
+#     conv5 = Convolution2D(512, 3, 3, **conv_params)(pool4)
+#     conv5 = Convolution2D(512, 3, 3, **conv_params)(conv5)
+# 
+#     up6 = merge_l([UpSampling2D(size=(2, 2))(conv5), conv4], **merge_params)
+#     conv6 = Convolution2D(256, 3, 3, **conv_params)(up6)
+#     conv6 = Convolution2D(256, 3, 3, **conv_params)(conv6)
+# 
+#     up7 = merge_l([UpSampling2D(size=(2, 2))(conv6), conv3], **merge_params)
+#     conv7 = Convolution2D(128, 3, 3, **conv_params)(up7)
+#     conv7 = Convolution2D(128, 3, 3, **conv_params)(conv7)
+# 
+#     up8 = merge_l([UpSampling2D(size=(2, 2))(conv7), conv2], **merge_params)
+#     conv8 = Convolution2D(64, 3, 3, **conv_params)(up8)
+#     conv8 = Convolution2D(64, 3, 3, **conv_params)(conv8)
+# 
+#     up9 = merge_l([UpSampling2D(size=(2, 2))(conv8), conv1], **merge_params)
+#     conv9 = Convolution2D(32, 3, 3, **conv_params)(up9)
+#     conv9 = Convolution2D(32, 3, 3, **conv_params)(conv9)
+# 
+#     conv10 = Convolution2D(1, 1, 1, activation='sigmoid')(conv9)
+#     adam = Adam()
+# 
+#     model = Model(input=inputs, output=conv10)
+#     model.compile(optimizer=adam,
+#                   loss='binary_crossentropy',
+#                   metrics=['accuracy', jaccard_coef, jaccard_coef_int])
+#     return model
 
 
 def jaccard_coef(y_true, y_pred):
@@ -972,6 +1041,7 @@ def _get_valtest_mul_data(area_id):
     with tb.open_file(fn_im, 'r') as f:
         for idx, image_id in enumerate(df_test.ImageId.tolist()):
             im = np.array(f.get_node('/' + image_id))
+            # fjr channel first
             im = np.swapaxes(im, 0, 2)
             im = np.swapaxes(im, 1, 2)
             X_val.append(im)
@@ -1000,6 +1070,7 @@ def _get_valtrain_mul_data(area_id):
     with tb.open_file(fn_im, 'r') as f:
         for idx, image_id in enumerate(df_train.ImageId.tolist()):
             im = np.array(f.get_node('/' + image_id))
+            # fjr channel last
             im = np.swapaxes(im, 0, 2)
             im = np.swapaxes(im, 1, 2)
             X_val.append(im)
@@ -1657,6 +1728,10 @@ def validate(datapath):
     logger.info(">> validate sub-command: {}".format(prefix))
 
     X_mean = get_mul_mean_image(area_id)
+
+    # fjr
+    # X_mean = np.swapaxes(X_mean, 0, 2)
+    # X_mean = np.swapaxes(X_mean, 0, 1)
     X_val, y_val = _get_valtest_mul_data(area_id)
     X_val = X_val - X_mean
 
@@ -1667,7 +1742,9 @@ def validate(datapath):
     X_trn, y_trn = _get_valtrain_mul_data(area_id)
     X_trn = X_trn - X_mean
 
-    model = get_unet()
+    #model = get_unet()
+    #model = get_linknet()
+    model = get_deeplab()
 
     # load weights here
     is_load_weights = False
@@ -1696,6 +1773,29 @@ def validate(datapath):
 
     df_train = pd.read_csv(FMT_VALTRAIN_IMAGELIST_PATH.format(prefix=prefix))
     logger.info("Fit")
+
+    print('X_trn.shape : ', X_trn.shape)
+    print('y_trn.shape : ', y_trn.shape)
+    print('X_val.shape : ', X_val.shape)
+    print('y_val.shape : ', y_val.shape)
+    print(' ----before---- ')
+
+    X_trn = np.swapaxes(X_trn, 1, 3)
+    X_trn = np.swapaxes(X_trn, 1, 2)
+
+    y_trn = np.swapaxes(y_trn, 1, 3)
+    y_trn = np.swapaxes(y_trn, 1, 2)
+
+    X_val = np.swapaxes(X_val, 1, 3)
+    X_val = np.swapaxes(X_val, 1, 2)
+
+    y_val = np.swapaxes(y_val, 1, 3)
+    y_val = np.swapaxes(y_val, 1, 2)
+
+    print('X_trn.shape : ', X_trn.shape)
+    print('y_trn.shape : ', y_trn.shape)
+    print('X_val.shape : ', X_val.shape)
+    print('y_val.shape : ', y_val.shape)
 
     model.fit(
         X_trn, y_trn,
