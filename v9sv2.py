@@ -5,6 +5,7 @@ v9s model
 * Input: v5_im
 
 Author: Kohei <i@ho.lc>
+feifeibear <>
 """
 from logging import getLogger, Formatter, StreamHandler, INFO, FileHandler
 from pathlib import Path
@@ -25,12 +26,9 @@ import tables as tb
 import pandas as pd
 import numpy as np
 from keras.models import Model
-from keras.engine.topology import merge as merge_l
-from keras.layers import (
-    Input, Convolution2D, MaxPooling2D, UpSampling2D,
-    Reshape, core, Dropout,
-    Activation, BatchNormalization)
+from keras.layers import Input, concatenate, Conv2D, MaxPooling2D, Conv2DTranspose, BatchNormalization, Activation
 from keras.optimizers import Adam
+from keras.callbacks import ModelCheckpoint
 from keras.callbacks import ModelCheckpoint, EarlyStopping, History
 from keras import backend as K
 import skimage.transform
@@ -39,9 +37,13 @@ import rasterio.features
 import shapely.wkt
 import shapely.ops
 import shapely.geometry
+import layers_builder as layers
+from models.deeplab import Deeplabv3
+from models.linknet import LinkNet
+from models.FCN32 import FCN32
 
-FIT_BATCH_SIZE = 32 # 32 originally
-PRED_BATCH_SIZE = 96
+FIT_BATCH_SIZE = 32 if os.environ['FIT_BATCH_SIZE'] == '' else int(os.environ['FIT_BATCH_SIZE'])
+PRED_BATCH_SIZE = 64 if os.environ['PRED_BATCH_SIZE'] == '' else int(os.environ['PRED_BATCH_SIZE'])
 
 MODEL_NAME = 'v9s'
 ORIGINAL_SIZE = 650
@@ -106,7 +108,7 @@ FMT_MULMEAN = IMAGE_DIR + "/{}_mulmean.h5"
 
 # Model files
 FMT_VALMODEL_PATH = MODEL_DIR + "/{}_val_weights.h5"
-FMT_FULLMODEL_PATH = MODEL_DIR + "/{}_full_weights.h5"
+F473MT_FULLMODEL_PATH = MODEL_DIR + "/{}_full_weights.h5"
 FMT_VALMODEL_HIST = MODEL_DIR + "/{}_val_hist.csv"
 FMT_VALMODEL_EVALHIST = MODEL_DIR + "/{}_val_evalhist.csv"
 FMT_VALMODEL_EVALTHHIST = MODEL_DIR + "/{}_val_evalhist_th.csv"
@@ -719,86 +721,217 @@ def __calc_mul_multiband_cut_threshold(area_id):
             band_values[i_chan], 2)
     return band_cut_th
 
-def get_unet_bn():
-    conv_params = dict(bias=False, border_mode='same')
-    merge_params = dict(mode='concat', concat_axis=1)
-    pupPost()
 
+# fjr add
+# def get_vggunet2():
+#     return Models.VGGUnet.VGGUnet2( n_classes = 2 ,  input_height=256, input_width=256, vgg_level=3)
+# 
+# def get_pspnet():
+#     return layers.build_pspnet(nb_classes=2,
+#             resnet_layers=50, # 101
+#             input_shape=[256, 256],
+#             activation='binary_crossentropy')
+
+def get_deeplab():
+    #return Deeplabv3(weights=None, input_tensor=None, classes=1, OS=16)
+    return Deeplabv3(weights=None, input_tensor=None, classes=1, OS=8)
+
+def get_linknet():
+    return LinkNet(classes=1)
+
+def get_fcn32():
+    return FCN32(n_classes=1)
+
+def get_unet_bn():
+#    inputs = Input((8, img_rows, img_cols))
+    # inputs = Input((8, 256, 256))
+    # inputs = Input((256, 256, 8))
+    myaxis = 1
+    inputs = Input((8, 256, 256))
+    conv1 = Conv2D(32, (3, 3), padding='same', use_bias=False)(inputs)
+    conv1 = BatchNormalization()(conv1)
+    conv1 = Activation("relu")(conv1)
+
+    conv1 = Conv2D(32, (3, 3), use_bias=False, padding='same')(conv1)
+    conv1 = BatchNormalization()(conv1)
+    conv1 = Activation("relu")(conv1)
+
+    pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+
+    conv2 = Conv2D(64, (3, 3), use_bias=False, padding='same')(pool1)
+    conv2 = BatchNormalization()(conv2)
+    conv2 = Activation("relu")(conv2)
+    conv2 = Conv2D(64, (3, 3), use_bias=False, padding='same')(conv2)
+    conv2 = BatchNormalization()(conv2)
+    conv2 = Activation("relu")(conv2)
+    pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
+
+    conv3 = Conv2D(128, (3, 3), use_bias=False, padding='same')(pool2)
+    conv3 = BatchNormalization()(conv3)
+    conv3 = Activation("relu")(conv3)
+    conv3 = Conv2D(128, (3, 3), use_bias=False, padding='same')(conv3)
+    conv3 = BatchNormalization()(conv3)
+    conv3 = Activation("relu")(conv3)
+    pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
+
+    conv4 = Conv2D(256, (3, 3), use_bias=False, padding='same')(pool3)
+    conv4 = BatchNormalization()(conv4)
+    conv4 = Activation("relu")(conv4)
+    conv4 = Conv2D(256, (3, 3), use_bias=False, padding='same')(conv4)
+    conv4 = BatchNormalization()(conv4)
+    conv4 = Activation("relu")(conv4)
+    pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
+
+    conv5 = Conv2D(512, (3, 3), use_bias=False, padding='same')(pool4)
+    conv5 = BatchNormalization()(conv5)
+    conv5 = Activation("relu")(conv5)
+    conv5 = Conv2D(512, (3, 3), use_bias=False, padding='same')(conv5)
+    conv5 = BatchNormalization()(conv5)
+    conv5 = Activation("relu")(conv5)
+
+    up6 = concatenate([Conv2DTranspose(256, (2, 2), strides=(2, 2), padding='same')(conv5), conv4], axis=myaxis)
+    conv6 = Conv2D(256, (3, 3), use_bias=False, padding='same')(up6)
+    conv6 = BatchNormalization()(conv6)
+    conv6 = Activation("relu")(conv6)
+    conv6 = Conv2D(256, (3, 3), use_bias=False, padding='same')(conv6)
+    conv6 = BatchNormalization()(conv6)
+    conv6 = Activation("relu")(conv6)
+
+    up7 = concatenate([Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same')(conv6), conv3], axis=myaxis)
+    conv7 = Conv2D(128, (3, 3), use_bias=False, padding='same')(up7)
+    conv7 = BatchNormalization()(conv7)
+    conv7 = Activation("relu")(conv7)
+    conv7 = Conv2D(128, (3, 3), use_bias=False, padding='same')(conv7)
+    conv7 = BatchNormalization()(conv7)
+    conv7 = Activation("relu")(conv7)
+
+    up8 = concatenate([Conv2DTranspose(64, (2, 2), strides=(2, 2), padding='same')(conv7), conv2], axis=myaxis)
+    conv8 = Conv2D(64, (3, 3), use_bias=False, padding='same')(up8)
+    conv8 = BatchNormalization()(conv8)
+    conv8 = Activation("relu")(conv8)
+    conv8 = Conv2D(64, (3, 3), use_bias=False, padding='same')(conv8)
+    conv8 = BatchNormalization()(conv8)
+    conv8 = Activation("relu")(conv8)
+
+    up9 = concatenate([Conv2DTranspose(32, (2, 2), strides=(2, 2), padding='same')(conv8), conv1], axis=myaxis)
+    conv9 = Conv2D(32, (3, 3), use_bias=False, padding='same')(up9)
+    conv9 = BatchNormalization()(conv9)
+    conv9 = Activation("relu")(conv9)
+    conv9 = Conv2D(32, (3, 3), use_bias=False, padding='same')(conv9)
+    conv9 = BatchNormalization()(conv9)
+    conv9 = Activation("relu")(conv9)
+
+    conv10 = Conv2D(1, (1, 1), activation='sigmoid')(conv9)
+
+    model = Model(inputs=[inputs], outputs=[conv10])
+
+    model.compile(optimizer=Adam(),
+                   loss='binary_crossentropy',
+                   metrics=['accuracy', jaccard_coef, jaccard_coef_int])
+
+#   model.compile(optimizer=Adam(lr=1e-5), loss=dice_coef_loss, metrics=[dice_coef])
+#                   metrics=['accuracy', jaccard_coef, jaccard_coef_int])
+
+    return model
+
+
+
+def get_unet_new():
+#    inputs = Input((8, img_rows, img_cols))
+    # inputs = Input((8, 256, 256))
+
+    myaxis = 3
+    inputs = Input((256, 256, 8))
+    conv1 = Conv2D(32, (3, 3), activation='relu', padding='same')(inputs)
+    conv1 = Conv2D(32, (3, 3), activation='relu', padding='same')(conv1)
+    pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+
+    conv2 = Conv2D(64, (3, 3), activation='relu', padding='same')(pool1)
+    conv2 = Conv2D(64, (3, 3), activation='relu', padding='same')(conv2)
+    pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
+
+    conv3 = Conv2D(128, (3, 3), activation='relu', padding='same')(pool2)
+    conv3 = Conv2D(128, (3, 3), activation='relu', padding='same')(conv3)
+    pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
+
+    conv4 = Conv2D(256, (3, 3), activation='relu', padding='same')(pool3)
+    conv4 = Conv2D(256, (3, 3), activation='relu', padding='same')(conv4)
+    pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
+
+    conv5 = Conv2D(512, (3, 3), activation='relu', padding='same')(pool4)
+    conv5 = Conv2D(512, (3, 3), activation='relu', padding='same')(conv5)
+
+    up6 = concatenate([Conv2DTranspose(256, (2, 2), strides=(2, 2), padding='same')(conv5), conv4], axis=myaxis)
+    conv6 = Conv2D(256, (3, 3), activation='relu', padding='same')(up6)
+    conv6 = Conv2D(256, (3, 3), activation='relu', padding='same')(conv6)
+
+    up7 = concatenate([Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same')(conv6), conv3], axis=myaxis)
+    conv7 = Conv2D(128, (3, 3), activation='relu', padding='same')(up7)
+    conv7 = Conv2D(128, (3, 3), activation='relu', padding='same')(conv7)
+
+    up8 = concatenate([Conv2DTranspose(64, (2, 2), strides=(2, 2), padding='same')(conv7), conv2], axis=myaxis)
+    conv8 = Conv2D(64, (3, 3), activation='relu', padding='same')(up8)
+    conv8 = Conv2D(64, (3, 3), activation='relu', padding='same')(conv8)
+
+    up9 = concatenate([Conv2DTranspose(32, (2, 2), strides=(2, 2), padding='same')(conv8), conv1], axis=myaxis)
+    conv9 = Conv2D(32, (3, 3), activation='relu', padding='same')(up9)
+    conv9 = Conv2D(32, (3, 3), activation='relu', padding='same')(conv9)
+
+    conv10 = Conv2D(1, (1, 1), activation='sigmoid')(conv9)
+
+    model = Model(inputs=[inputs], outputs=[conv10])
+
+    model.compile(optimizer=Adam(),
+                   loss='binary_crossentropy',
+                   metrics=['accuracy', jaccard_coef, jaccard_coef_int])
+
+#   model.compile(optimizer=Adam(lr=1e-5), loss=dice_coef_loss, metrics=[dice_coef])
+#                   metrics=['accuracy', jaccard_coef, jaccard_coef_int])
+
+    return model
+
+def get_unetv1_bn():
+    conv_params = dict(activation='relu', border_mode='same')
+    merge_params = dict(mode='concat', concat_axis=1)
     inputs = Input((8, 256, 256))
     conv1 = Convolution2D(32, 3, 3, **conv_params)(inputs)
-    conv1 = BatchNormalization(conv1)
-    conv1 = Activation('relu')(conv1)
+    conv1 = BatchNormalization()(conv1)
+    conv1 = Activation('tanh')(conv1)
     conv1 = Convolution2D(32, 3, 3, **conv_params)(conv1)
-    conv1 = BatchNormalization(conv1)
-    conv1 = Activation('relu')(conv1)
     pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 
     conv2 = Convolution2D(64, 3, 3, **conv_params)(pool1)
-    conv2 = BatchNormalization(conv2)
-    conv2 = Activation('relu')(conv2)
     conv2 = Convolution2D(64, 3, 3, **conv_params)(conv2)
-    conv2 = BatchNormalization(conv2)
-    conv2 = Activation('relu')(conv2)
     pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
 
     conv3 = Convolution2D(128, 3, 3, **conv_params)(pool2)
-    conv3 = BatchNormalization(conv3)
-    conv3 = Activation('relu')(conv3)
     conv3 = Convolution2D(128, 3, 3, **conv_params)(conv3)
-    conv3 = BatchNormalization(conv3)
-    conv3 = Activation('relu')(conv3)
     pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
 
     conv4 = Convolution2D(256, 3, 3, **conv_params)(pool3)
-    conv4 = BatchNormalization(conv4)
-    conv4 = Activation('relu')(conv4)
     conv4 = Convolution2D(256, 3, 3, **conv_params)(conv4)
-    conv4 = BatchNormalization(conv4)
-    conv4 = Activation('relu')(conv4)
     pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
 
     conv5 = Convolution2D(512, 3, 3, **conv_params)(pool4)
-    conv5 = BatchNormalization(conv5)
-    conv5 = Activation('relu')(conv5)
     conv5 = Convolution2D(512, 3, 3, **conv_params)(conv5)
-    conv5 = BatchNormalization(conv5)
-    conv5 = Activation('relu')(conv5)
 
     up6 = merge_l([UpSampling2D(size=(2, 2))(conv5), conv4], **merge_params)
     conv6 = Convolution2D(256, 3, 3, **conv_params)(up6)
-    conv6 = BatchNormalization(conv6)
-    conv6 = Activation('relu')(conv6)
     conv6 = Convolution2D(256, 3, 3, **conv_params)(conv6)
-    conv6 = BatchNormalization(conv6)
-    conv6 = Activation('relu')(conv6)
 
     up7 = merge_l([UpSampling2D(size=(2, 2))(conv6), conv3], **merge_params)
     conv7 = Convolution2D(128, 3, 3, **conv_params)(up7)
-    conv7 = BatchNormalization(conv7)
-    conv7 = Activation('relu')(conv7)
     conv7 = Convolution2D(128, 3, 3, **conv_params)(conv7)
-    conv7 = BatchNormalization(conv7)
-    conv7 = Activation('relu')(conv7)
 
     up8 = merge_l([UpSampling2D(size=(2, 2))(conv7), conv2], **merge_params)
     conv8 = Convolution2D(64, 3, 3, **conv_params)(up8)
-    conv8 = BatchNormalization(conv8)
-    conv8 = Activation('relu')(conv8)
     conv8 = Convolution2D(64, 3, 3, **conv_params)(conv8)
-    conv8 = BatchNormalization(conv8)
-    conv8 = Activation('relu')(conv8)
 
     up9 = merge_l([UpSampling2D(size=(2, 2))(conv8), conv1], **merge_params)
     conv9 = Convolution2D(32, 3, 3, **conv_params)(up9)
-    conv9 = BatchNormalization(conv9)
-    conv9 = Activation('relu')(conv9)
     conv9 = Convolution2D(32, 3, 3, **conv_params)(conv9)
-    conv9 = BatchNormalization(conv9)
-    conv9 = Activation('relu')(conv9)
 
-    conv10 = Convolution2D(1, 1, 1)(conv9)
-    conv10 = BatchNormalization(conv10)
-    conv10 = Activation('sigmoid')(conv10)
+    conv10 = Convolution2D(1, 1, 1, activation='sigmoid')(conv9)
     adam = Adam()
 
     model = Model(input=inputs, output=conv10)
@@ -806,6 +939,17 @@ def get_unet_bn():
                   loss='binary_crossentropy',
                   metrics=['accuracy', jaccard_coef, jaccard_coef_int])
     return model
+
+
+def jaccard_coef(y_true, y_pred):
+    smooth = 1e-12
+    # fjr
+    #intersection = K.sum(y_true * y_pred, axis=[0, -1, -2])
+    intersection = K.sum(y_true * y_pred, axis=[0, -2, -3])
+    # sum_ = K.sum(y_true + y_pred, axis=[0, -1, -2])
+    sum_ = K.sum(y_true + y_pred, axis=[0, -2, -3])
+    jac = (intersection + smooth) / (sum_ - intersection + smooth)
+    return K.mean(jac)
 
 
 
@@ -860,8 +1004,11 @@ def get_unet():
 
 def jaccard_coef(y_true, y_pred):
     smooth = 1e-12
-    intersection = K.sum(y_true * y_pred, axis=[0, -1, -2])
-    sum_ = K.sum(y_true + y_pred, axis=[0, -1, -2])
+    # fjr
+    #intersection = K.sum(y_true * y_pred, axis=[0, -1, -2])
+    intersection = K.sum(y_true * y_pred, axis=[0, -2, -3])
+    # sum_ = K.sum(y_true + y_pred, axis=[0, -1, -2])
+    sum_ = K.sum(y_true + y_pred, axis=[0, -2, -3])
     jac = (intersection + smooth) / (sum_ - intersection + smooth)
     return K.mean(jac)
 
@@ -869,8 +1016,10 @@ def jaccard_coef(y_true, y_pred):
 def jaccard_coef_int(y_true, y_pred):
     smooth = 1e-12
     y_pred_pos = K.round(K.clip(y_pred, 0, 1))
-    intersection = K.sum(y_true * y_pred_pos, axis=[0, -1, -2])
-    sum_ = K.sum(y_true + y_pred_pos, axis=[0, -1, -2])
+    # intersection = K.sum(y_true * y_pred_pos, axis=[0, -1, -2])
+    intersection = K.sum(y_true * y_pred_pos, axis=[0, -2, -3])
+    # sum_ = K.sum(y_true + y_pred_pos, axis=[0, -1, -2])
+    sum_ = K.sum(y_true + y_pred_pos, axis=[0, -2, -3])
     jac = (intersection + smooth) / (sum_ - intersection + smooth)
     return K.mean(jac)
 
@@ -1061,6 +1210,7 @@ def _get_valtest_mul_data(area_id):
     with tb.open_file(fn_im, 'r') as f:
         for idx, image_id in enumerate(df_test.ImageId.tolist()):
             im = np.array(f.get_node('/' + image_id))
+            # fjr channel first
             im = np.swapaxes(im, 0, 2)
             im = np.swapaxes(im, 1, 2)
             X_val.append(im)
@@ -1089,6 +1239,7 @@ def _get_valtrain_mul_data(area_id):
     with tb.open_file(fn_im, 'r') as f:
         for idx, image_id in enumerate(df_train.ImageId.tolist()):
             im = np.array(f.get_node('/' + image_id))
+            # fjr channel last
             im = np.swapaxes(im, 0, 2)
             im = np.swapaxes(im, 1, 2)
             X_val.append(im)
@@ -1746,6 +1897,10 @@ def validate(datapath):
     logger.info(">> validate sub-command: {}".format(prefix))
 
     X_mean = get_mul_mean_image(area_id)
+
+    # fjr
+    # X_mean = np.swapaxes(X_mean, 0, 2)
+    # X_mean = np.swapaxes(X_mean, 0, 1)
     X_val, y_val = _get_valtest_mul_data(area_id)
     X_val = X_val - X_mean
 
@@ -1756,7 +1911,19 @@ def validate(datapath):
     X_trn, y_trn = _get_valtrain_mul_data(area_id)
     X_trn = X_trn - X_mean
 
-    model = get_unet_bn()
+    use_channel_last = True
+    model_name = "unet"
+    if model_name == "unet":
+        model = get_unet_bn()
+        use_channel_last = False 
+    elif model_name == "linknet":
+        model = get_linknet()
+    elif model_name == "deeplab":
+        model = get_deeplab()
+    elif model_name == "fcn32":
+        # TODO failed 
+        model = get_fcn32()
+        use_channel_last = False
 
     # load weights here
     is_load_weights = False
@@ -1785,6 +1952,26 @@ def validate(datapath):
 
     df_train = pd.read_csv(FMT_VALTRAIN_IMAGELIST_PATH.format(prefix=prefix))
     logger.info("Fit")
+
+
+    if use_channel_last:
+        print('X_trn.shape : ', X_trn.shape)
+        print('y_trn.shape : ', y_trn.shape)
+        print('X_val.shape : ', X_val.shape)
+        print('y_val.shape : ', y_val.shape)
+        print(' ----before---- ')
+        X_trn = np.swapaxes(X_trn, 1, 3)
+        X_trn = np.swapaxes(X_trn, 1, 2)
+        y_trn = np.swapaxes(y_trn, 1, 3)
+        y_trn = np.swapaxes(y_trn, 1, 2)
+        X_val = np.swapaxes(X_val, 1, 3)
+        X_val = np.swapaxes(X_val, 1, 2)
+        y_val = np.swapaxes(y_val, 1, 3)
+        y_val = np.swapaxes(y_val, 1, 2)
+        print('X_trn.shape : ', X_trn.shape)
+        print('y_trn.shape : ', y_trn.shape)
+        print('X_val.shape : ', X_val.shape)
+        print('y_val.shape : ', y_val.shape)
 
     model.fit(
         X_trn, y_trn,
@@ -1828,7 +2015,8 @@ def evalfscore(datapath):
         df_hist.loc[:, 'epoch'] = list(range(1, len(df_hist) + 1))
 
         rows = []
-        for zero_base_epoch in range(0, len(df_hist)):
+        #fjr start from 1
+        for zero_base_epoch in range(1, len(df_hist)):
             logger.info(">>> Epoch: {}".format(zero_base_epoch))
             _internal_validate_fscore_wo_pred_file(
                 area_id,
