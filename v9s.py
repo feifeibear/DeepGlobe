@@ -745,8 +745,9 @@ def get_fcn32():
 def get_unet_bn():
 #    inputs = Input((8, img_rows, img_cols))
     # inputs = Input((8, 256, 256))
-    myaxis = 3
-    inputs = Input((256, 256, 8))
+    # inputs = Input((256, 256, 8))
+    myaxis = 1
+    inputs = Input((8, 256, 256))
     conv1 = Conv2D(32, (3, 3), padding='same', use_bias=False)(inputs)
     conv1 = BatchNormalization()(conv1)
     conv1 = Activation("relu")(conv1)
@@ -1851,6 +1852,7 @@ def validate(datapath):
     model_name = "unet"
     if model_name == "unet":
         model = get_unet_bn()
+        use_channel_last = False 
     elif model_name == "linknet":
         model = get_linknet()
     elif model_name == "deeplab":
