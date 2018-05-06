@@ -1942,7 +1942,8 @@ def evalfscore(datapath):
         df_hist.loc[:, 'epoch'] = list(range(1, len(df_hist) + 1))
 
         rows = []
-        for zero_base_epoch in range(0, len(df_hist)):
+        # fjr start from 1
+        for zero_base_epoch in range(1, len(df_hist)):
             logger.info(">>> Epoch: {}".format(zero_base_epoch))
             _internal_validate_fscore_wo_pred_file(
                 area_id,
