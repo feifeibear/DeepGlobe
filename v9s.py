@@ -720,7 +720,7 @@ def __calc_mul_multiband_cut_threshold(area_id):
     return band_cut_th
 
 def get_unet_bn():
-    conv_params = dict(bias=False, border_mode='same')
+    conv_params = dict(bias=False, border_mode='same', dim_ordering='th')
     merge_params = dict(mode='concat', concat_axis=1)
 
     inputs = Input((8, 256, 256))
@@ -1088,6 +1088,7 @@ def _get_valtrain_mul_data(area_id):
     with tb.open_file(fn_im, 'r') as f:
         for idx, image_id in enumerate(df_train.ImageId.tolist()):
             im = np.array(f.get_node('/' + image_id))
+            # data augment
             im = np.swapaxes(im, 0, 2)
             im = np.swapaxes(im, 1, 2)
             X_val.append(im)
@@ -1103,7 +1104,38 @@ def _get_valtrain_mul_data(area_id):
     y_val = np.array(y_val)
     y_val = y_val.reshape((-1, 1, INPUT_SIZE, INPUT_SIZE))
 
-    return X_val, y_val
+    # fjr data augment
+    if 1:
+        X_val_new = []
+        y_val_new = []
+        for img, label in zip(X_val, y_val):
+            img_org = np.copy(img)
+            label_org = np.copy(label)
+            X_val_new.append(np.copy(img))
+            y_val_new.append(np.copy(label))
+            for idx in range(len(img_org)):
+                img[idx] = np.fliplr(img_org[idx])
+            for idx in range(len(label_org)):
+                label[idx] = np.fliplr(label_org[idx])
+            X_val_new.append(np.copy(img))
+            y_val_new.append(np.copy(label))
+            for idx in range(len(img_org)):
+                img[idx] = np.flipud(img_org[idx])
+            for idx in range(len(label_org)):
+                label[idx] = np.flipud(label_org[idx])
+            X_val_new.append(np.copy(img))
+            y_val_new.append(np.copy(label))
+            for idx in range(len(img_org)):
+                img[idx] = np.fliplr(np.flipud(img_org[idx]))
+            for idx in range(len(label_org)):
+                label[idx] = np.fliplr(np.flipud(label_org[idx]))
+            X_val_new.append(np.copy(img))
+            y_val_new.append(np.copy(label))
+        X_val_new = np.array(X_val_new)
+        y_val_new = np.array(y_val_new)
+        return X_val_new, y_val_new
+    else:
+        return X_val, y_val
 
 
 def get_mul_mean_image(area_id):
@@ -1155,7 +1187,7 @@ def _internal_test_predict_best_param(area_id,
     fn = FMT_TESTPRED_PATH.format(prefix)
     fn_model = FMT_VALMODEL_PATH.format(prefix + '_{epoch:02d}')
     fn_model = fn_model.format(epoch=epoch)
-    model = get_unet_bn()
+    model = get_unet()
     model.load_weights(fn_model)
 
     fn_test = FMT_TEST_IMAGELIST_PATH.format(prefix=prefix)
@@ -1240,7 +1272,7 @@ def validate_score(area_id):
 
         # Load model weights
         # Predict and Save prediction result
-        model = get_unet_bn()
+        model = get_unet()
         model.load_weights(FMT_VALMODEL_PATH.format(prefix))
         y_pred = model.predict(X_val - X_mean, batch_size=8, verbose=1)
         del model
@@ -1519,7 +1551,7 @@ def predict(area_id):
 
     # Load model weights
     # Predict and Save prediction result
-    model = get_unet_bn()
+    model = get_unet()
     model.load_weights(FMT_VALMODEL_PATH.format(prefix))
     y_pred = model.predict(X_test - X_mean, batch_size=8, verbose=1)
     del model
@@ -1558,7 +1590,7 @@ def _internal_validate_predict(area_id,
     # Predict and Save prediction result
     fn_model = FMT_VALMODEL_PATH.format(prefix + '_{epoch:02d}')
     fn_model = fn_model.format(epoch=epoch)
-    model = get_unet_bn()
+    model = get_unet()
     model.load_weights(fn_model)
 
     fn_test = FMT_VALTEST_IMAGELIST_PATH.format(prefix=prefix)
@@ -1755,7 +1787,7 @@ def validate(datapath):
     X_trn, y_trn = _get_valtrain_mul_data(area_id)
     X_trn = X_trn - X_mean
 
-    model = get_unet_bn()
+    model = get_unet()
 
     # load weights here
     is_load_weights = False
