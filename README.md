@@ -1,0 +1,1 @@
+This repo contains code for DEEPGLOBE - CVPR 2018 SATELLITE CHALLENGE
