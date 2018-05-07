@@ -30,7 +30,7 @@ from keras.layers import (
     Input, Convolution2D, MaxPooling2D,
     Reshape, core, Dropout,
     Activation, BatchNormalization,
-    UpSampling2D, Cropping2D)
+    UpSampling2D, Cropping2D, advanced_activations)
 from keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint, EarlyStopping, History
 from keras import backend as K
@@ -812,78 +812,81 @@ def get_unet0():
     inputs = Input((8, 256, 256))
     conv1 = Convolution2D(32, 3, 3, border_mode='same', init='he_uniform')(inputs)
     conv1 = BatchNormalization(mode=0, axis=1)(conv1)
-    conv1 = keras.layers.advanced_activations.ELU()(conv1)
+    conv1 = advanced_activations.ELU()(conv1)
     conv1 = Convolution2D(32, 3, 3, border_mode='same', init='he_uniform')(conv1)
     conv1 = BatchNormalization(mode=0, axis=1)(conv1)
-    conv1 = keras.layers.advanced_activations.ELU()(conv1)
+    conv1 = advanced_activations.ELU()(conv1)
     pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 
     conv2 = Convolution2D(64, 3, 3, border_mode='same', init='he_uniform')(pool1)
     conv2 = BatchNormalization(mode=0, axis=1)(conv2)
-    conv2 = keras.layers.advanced_activations.ELU()(conv2)
+    conv2 = advanced_activations.ELU()(conv2)
     conv2 = Convolution2D(64, 3, 3, border_mode='same', init='he_uniform')(conv2)
     conv2 = BatchNormalization(mode=0, axis=1)(conv2)
-    conv2 = keras.layers.advanced_activations.ELU()(conv2)
+    conv2 = advanced_activations.ELU()(conv2)
     pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
 
     conv3 = Convolution2D(128, 3, 3, border_mode='same', init='he_uniform')(pool2)
     conv3 = BatchNormalization(mode=0, axis=1)(conv3)
-    conv3 = keras.layers.advanced_activations.ELU()(conv3)
+    conv3 = advanced_activations.ELU()(conv3)
     conv3 = Convolution2D(128, 3, 3, border_mode='same', init='he_uniform')(conv3)
     conv3 = BatchNormalization(mode=0, axis=1)(conv3)
-    conv3 = keras.layers.advanced_activations.ELU()(conv3)
+    conv3 = advanced_activations.ELU()(conv3)
     pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
 
     conv4 = Convolution2D(256, 3, 3, border_mode='same', init='he_uniform')(pool3)
     conv4 = BatchNormalization(mode=0, axis=1)(conv4)
-    conv4 = keras.layers.advanced_activations.ELU()(conv4)
+    conv4 = advanced_activations.ELU()(conv4)
     conv4 = Convolution2D(256, 3, 3, border_mode='same', init='he_uniform')(conv4)
     conv4 = BatchNormalization(mode=0, axis=1)(conv4)
-    conv4 = keras.layers.advanced_activations.ELU()(conv4)
+    conv4 = advanced_activations.ELU()(conv4)
     pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
 
     conv5 = Convolution2D(512, 3, 3, border_mode='same', init='he_uniform')(pool4)
     conv5 = BatchNormalization(mode=0, axis=1)(conv5)
-    conv5 = keras.layers.advanced_activations.ELU()(conv5)
+    conv5 = advanced_activations.ELU()(conv5)
     conv5 = Convolution2D(512, 3, 3, border_mode='same', init='he_uniform')(conv5)
     conv5 = BatchNormalization(mode=0, axis=1)(conv5)
-    conv5 = keras.layers.advanced_activations.ELU()(conv5)
+    conv5 = dvanced_activations.ELU()(conv5)
 
     up6 = merge([UpSampling2D(size=(2, 2))(conv5), conv4], mode='concat', concat_axis=1)
     conv6 = Convolution2D(256, 3, 3, border_mode='same', init='he_uniform')(up6)
     conv6 = BatchNormalization(mode=0, axis=1)(conv6)
-    conv6 = keras.layers.advanced_activations.ELU()(conv6)
+    conv6 = advanced_activations.ELU()(conv6)
     conv6 = Convolution2D(256, 3, 3, border_mode='same', init='he_uniform')(conv6)
     conv6 = BatchNormalization(mode=0, axis=1)(conv6)
-    conv6 = keras.layers.advanced_activations.ELU()(conv6)
+    conv6 = advanced_activations.ELU()(conv6)
 
     up7 = merge([UpSampling2D(size=(2, 2))(conv6), conv3], mode='concat', concat_axis=1)
     conv7 = Convolution2D(128, 3, 3, border_mode='same', init='he_uniform')(up7)
     conv7 = BatchNormalization(mode=0, axis=1)(conv7)
-    conv7 = keras.layers.advanced_activations.ELU()(conv7)
+    conv7 = advanced_activations.ELU()(conv7)
     conv7 = Convolution2D(128, 3, 3, border_mode='same', init='he_uniform')(conv7)
     conv7 = BatchNormalization(mode=0, axis=1)(conv7)
-    conv7 = keras.layers.advanced_activations.ELU()(conv7)
+    conv7 = advanced_activations.ELU()(conv7)
 
     up8 = merge([UpSampling2D(size=(2, 2))(conv7), conv2], mode='concat', concat_axis=1)
     conv8 = Convolution2D(64, 3, 3, border_mode='same', init='he_uniform')(up8)
     conv8 = BatchNormalization(mode=0, axis=1)(conv8)
-    conv8 = keras.layers.advanced_activations.ELU()(conv8)
+    conv8 = advanced_activations.ELU()(conv8)
     conv8 = Convolution2D(64, 3, 3, border_mode='same', init='he_uniform')(conv8)
     conv8 = BatchNormalization(mode=0, axis=1)(conv8)
-    conv8 = keras.layers.advanced_activations.ELU()(conv8)
+    conv8 = advanced_activations.ELU()(conv8)
 
     up9 = merge([UpSampling2D(size=(2, 2))(conv8), conv1], mode='concat', concat_axis=1)
     conv9 = Convolution2D(32, 3, 3, border_mode='same', init='he_uniform')(up9)
     conv9 = BatchNormalization(mode=0, axis=1)(conv9)
-    conv9 = keras.layers.advanced_activations.ELU()(conv9)
+    conv9 = advanced_activations.ELU()(conv9)
     conv9 = Convolution2D(32, 3, 3, border_mode='same', init='he_uniform')(conv9)
     crop9 = Cropping2D(cropping=((16, 16), (16, 16)))(conv9)
     conv9 = BatchNormalization(mode=0, axis=1)(crop9)
-    conv9 = keras.layers.advanced_activations.ELU()(conv9)
+    conv9 = advanced_activations.ELU()(conv9)
     conv10 = Convolution2D(num_mask_channels, 1, 1, activation='sigmoid')(conv9)
 
     model = Model(input=inputs, output=conv10)
+    model.compile(optimizer=adam,
+                  loss='binary_crossentropy',
+                  metrics=['accuracy', jaccard_coef, jaccard_coef_int])
 
     return model
 
