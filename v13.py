@@ -332,7 +332,7 @@ def _internal_test_predict_best_param(area_id,
     fn = FMT_TESTPRED_PATH.format(prefix)
     fn_model = FMT_VALMODEL_PATH.format(prefix + '_{epoch:02d}')
     fn_model = fn_model.format(epoch=epoch)
-    model = get_unet()
+    model = get_unet_bn()
     model.load_weights(fn_model)
 
     fn_test = FMT_TEST_IMAGELIST_PATH.format(prefix=prefix)
@@ -448,7 +448,7 @@ def _internal_validate_predict(area_id,
     # Predict and Save prediction result
     fn_model = FMT_VALMODEL_PATH.format(prefix + '_{epoch:02d}')
     fn_model = fn_model.format(epoch=epoch)
-    model = get_unet()
+    model = get_unet_bn()
     model.load_weights(fn_model)
 
     fn_test = FMT_VALTEST_IMAGELIST_PATH.format(prefix=prefix)
@@ -848,6 +848,93 @@ def generate_valtrain_batch(area_id, batch_size=8, immean=None):
                     X_train = X_train - immean
 
                 yield (X_train, y_train)
+
+def get_unet_bn():
+    conv_params = dict(bias=False, border_mode='same', dim_ordering='th')
+    merge_params = dict(mode='concat', concat_axis=1)
+
+    inputs = Input((8, 256, 256))
+    conv1 = Convolution2D(32, 3, 3, **conv_params)(inputs)
+    conv1 = BatchNormalization(axis=1)(conv1)
+    conv1 = Activation('relu')(conv1)
+    conv1 = Convolution2D(32, 3, 3, **conv_params)(conv1)
+    conv1 = BatchNormalization(axis=1)(conv1)
+    conv1 = Activation('relu')(conv1)
+    pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+
+    conv2 = Convolution2D(64, 3, 3, **conv_params)(pool1)
+    conv2 = BatchNormalization(axis=1)(conv2)
+    conv2 = Activation('relu')(conv2)
+    conv2 = Convolution2D(64, 3, 3, **conv_params)(conv2)
+    conv2 = BatchNormalization(axis=1)(conv2)
+    conv2 = Activation('relu')(conv2)
+    pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
+
+    conv3 = Convolution2D(128, 3, 3, **conv_params)(pool2)
+    conv3 = BatchNormalization(axis=1)(conv3)
+    conv3 = Activation('relu')(conv3)
+    conv3 = Convolution2D(128, 3, 3, **conv_params)(conv3)
+    conv3 = BatchNormalization(axis=1)(conv3)
+    conv3 = Activation('relu')(conv3)
+    pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
+
+    conv4 = Convolution2D(256, 3, 3, **conv_params)(pool3)
+    conv4 = BatchNormalization(axis=1)(conv4)
+    conv4 = Activation('relu')(conv4)
+    conv4 = Convolution2D(256, 3, 3, **conv_params)(conv4)
+    conv4 = BatchNormalization(axis=1)(conv4)
+    conv4 = Activation('relu')(conv4)
+    pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
+
+    conv5 = Convolution2D(512, 3, 3, **conv_params)(pool4)
+    conv5 = BatchNormalization(axis=1)(conv5)
+    conv5 = Activation('relu')(conv5)
+    conv5 = Convolution2D(512, 3, 3, **conv_params)(conv5)
+    conv5 = BatchNormalization(axis=1)(conv5)
+    conv5 = Activation('relu')(conv5)
+
+    up6 = merge_l([UpSampling2D(size=(2, 2))(conv5), conv4], **merge_params)
+    conv6 = Convolution2D(256, 3, 3, **conv_params)(up6)
+    conv6 = BatchNormalization(axis=1)(conv6)
+    conv6 = Activation('relu')(conv6)
+    conv6 = Convolution2D(256, 3, 3, **conv_params)(conv6)
+    conv6 = BatchNormalization(axis=1)(conv6)
+    conv6 = Activation('relu')(conv6)
+
+    up7 = merge_l([UpSampling2D(size=(2, 2))(conv6), conv3], **merge_params)
+    conv7 = Convolution2D(128, 3, 3, **conv_params)(up7)
+    conv7 = BatchNormalization(axis=1)(conv7)
+    conv7 = Activation('relu')(conv7)
+    conv7 = Convolution2D(128, 3, 3, **conv_params)(conv7)
+    conv7 = BatchNormalization(axis=1)(conv7)
+    conv7 = Activation('relu')(conv7)
+
+    up8 = merge_l([UpSampling2D(size=(2, 2))(conv7), conv2], **merge_params)
+    conv8 = Convolution2D(64, 3, 3, **conv_params)(up8)
+    conv8 = BatchNormalization(axis=1)(conv8)
+    conv8 = Activation('relu')(conv8)
+    conv8 = Convolution2D(64, 3, 3, **conv_params)(conv8)
+    conv8 = BatchNormalization(axis=1)(conv8)
+    conv8 = Activation('relu')(conv8)
+
+    up9 = merge_l([UpSampling2D(size=(2, 2))(conv8), conv1], **merge_params)
+    conv9 = Convolution2D(32, 3, 3, **conv_params)(up9)
+    conv9 = BatchNormalization(axis=1)(conv9)
+    conv9 = Activation('relu')(conv9)
+    conv9 = Convolution2D(32, 3, 3, **conv_params)(conv9)
+    conv9 = BatchNormalization(axis=1)(conv9)
+    conv9 = Activation('relu')(conv9)
+
+    conv10 = Convolution2D(1, 1, 1)(conv9)
+    conv10 = BatchNormalization(axis=1)(conv10)
+    conv10 = Activation('sigmoid')(conv10)
+    adam = Adam()
+
+    model = Model(input=inputs, output=conv10)
+    model.compile(optimizer=adam,
+                  loss='binary_crossentropy',
+                  metrics=['accuracy', jaccard_coef, jaccard_coef_int])
+    return model
 
 
 def get_unet():
@@ -1806,7 +1893,7 @@ def validate(datapath):
         Path(MODEL_DIR).mkdir(parents=True)
 
     logger.info("Instantiate U-Net model")
-    model = get_unet()
+    model = get_unet_bn()
 
     start_epoch = START_EPOCH
     stop_epoch  = STOP_EPOCH
