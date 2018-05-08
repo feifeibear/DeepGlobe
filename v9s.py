@@ -41,8 +41,8 @@ import shapely.wkt
 import shapely.ops
 import shapely.geometry
 
-FIT_BATCH_SIZE = 32 # 32 originally
-PRED_BATCH_SIZE = 96
+FIT_BATCH_SIZE = 8 # 32 originally
+PRED_BATCH_SIZE = 8
 
 MODEL_NAME = 'v9s'
 ORIGINAL_SIZE = 650
@@ -879,8 +879,8 @@ def get_unet0():
     conv9 = BatchNormalization(mode=0, axis=1)(conv9)
     conv9 = advanced_activations.ELU()(conv9)
     conv9 = Convolution2D(32, 3, 3, border_mode='same', init='he_uniform')(conv9)
-    crop9 = Cropping2D(cropping=((16, 16), (16, 16)))(conv9)
-    conv9 = BatchNormalization(mode=0, axis=1)(crop9)
+    #crop9 = Cropping2D(cropping=((16, 16), (16, 16)))(conv9)
+    conv9 = BatchNormalization(mode=0, axis=1)(conv9)
     conv9 = advanced_activations.ELU()(conv9)
     conv10 = Convolution2D(1, 1, 1, activation='sigmoid')(conv9)
     adam = Adam()
