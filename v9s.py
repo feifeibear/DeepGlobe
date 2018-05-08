@@ -146,6 +146,16 @@ if __name__ == '__main__':
 # Fix seed for reproducibility
 np.random.seed(1145141919)
 
+#fjr
+#print(y_val)
+def flip_axis(x, axis):
+    x = np.asarray(x).swapaxes(axis, 0)
+    x = x[::-1, ...]
+    x = x.swapaxes(0, axis)
+    return x
+
+
+
 
 def directory_name_to_area_id(datapath):
     """
