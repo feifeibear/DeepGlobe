@@ -156,6 +156,14 @@ if __name__ == '__main__':
 # Fix seed for reproducibility
 np.random.seed(1145141919)
 
+#fjr
+#print(y_val)
+def flip_axis(x, axis):
+    x = np.asarray(x).swapaxes(axis, 0)
+    x = x[::-1, ...]
+    x = x.swapaxes(0, axis)
+    return x
+
 
 def directory_name_to_area_id(datapath):
     """
@@ -846,6 +854,23 @@ def generate_valtrain_batch(area_id, batch_size=8, immean=None):
 
                 if immean is not None:
                     X_train = X_train - immean
+                data_agu = 1
+                if data_agu == 1:
+                    for i in range(X_train.shape[0]):
+                        xb = X_train[i] 
+                        yb = y_train[i] 
+                        if np.random.random() < 0.5:
+                            xb = flip_axis(xb, 1)
+                            yb = flip_axis(yb, 1)
+                        if np.random.random() < 0.5:
+                            xb = flip_axis(xb, 2)
+                            yb = flip_axis(yb, 2)
+                        if np.random.random() < 0.5:
+                            xb = xb.swapaxes(1, 2)
+                            yb = yb.swapaxes(1, 2)
+                    X_train[i] = xb
+                    y_train[i] = yb
+
 
                 yield (X_train, y_train)
 
@@ -935,6 +960,140 @@ def get_unet_bn():
                   loss='binary_crossentropy',
                   metrics=['accuracy', jaccard_coef, jaccard_coef_int])
     return model
+
+def get_unet0():
+    inputs = Input((8, 256, 256))
+    merge_params = dict(mode='concat', concat_axis=1)
+    conv1 = Convolution2D(32, 3, 3, border_mode='same', init='he_uniform')(inputs)
+    conv1 = BatchNormalization(mode=0, axis=1)(conv1)
+    conv1 = advanced_activations.ELU()(conv1)
+    conv1 = Convolution2D(32, 3, 3, border_mode='same', init='he_uniform')(conv1)
+    conv1 = BatchNormalization(mode=0, axis=1)(conv1)
+    conv1 = advanced_activations.ELU()(conv1)
+    pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+
+    conv2 = Convolution2D(64, 3, 3, border_mode='same', init='he_uniform')(pool1)
+    conv2 = BatchNormalization(mode=0, axis=1)(conv2)
+    conv2 = advanced_activations.ELU()(conv2)
+    conv2 = Convolution2D(64, 3, 3, border_mode='same', init='he_uniform')(conv2)
+    conv2 = BatchNormalization(mode=0, axis=1)(conv2)
+    conv2 = advanced_activations.ELU()(conv2)
+    pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
+
+    conv3 = Convolution2D(128, 3, 3, border_mode='same', init='he_uniform')(pool2)
+    conv3 = BatchNormalization(mode=0, axis=1)(conv3)
+    conv3 = advanced_activations.ELU()(conv3)
+    conv3 = Convolution2D(128, 3, 3, border_mode='same', init='he_uniform')(conv3)
+    conv3 = BatchNormalization(mode=0, axis=1)(conv3)
+    conv3 = advanced_activations.ELU()(conv3)
+    pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
+
+    conv4 = Convolution2D(256, 3, 3, border_mode='same', init='he_uniform')(pool3)
+    conv4 = BatchNormalization(mode=0, axis=1)(conv4)
+    conv4 = advanced_activations.ELU()(conv4)
+    conv4 = Convolution2D(256, 3, 3, border_mode='same', init='he_uniform')(conv4)
+    conv4 = BatchNormalization(mode=0, axis=1)(conv4)
+    conv4 = advanced_activations.ELU()(conv4)
+    pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
+
+    conv5 = Convolution2D(512, 3, 3, border_mode='same', init='he_uniform')(pool4)
+    conv5 = BatchNormalization(mode=0, axis=1)(conv5)
+    conv5 = advanced_activations.ELU()(conv5)
+    conv5 = Convolution2D(512, 3, 3, border_mode='same', init='he_uniform')(conv5)
+    conv5 = BatchNormalization(mode=0, axis=1)(conv5)
+    conv5 = advanced_activations.ELU()(conv5)
+
+    up6 = merge_l([UpSampling2D(size=(2, 2))(conv5), conv4], mode='concat', concat_axis=1)
+    conv6 = Convolution2D(256, 3, 3, border_mode='same', init='he_uniform')(up6)
+    conv6 = BatchNormalization(mode=0, axis=1)(conv6)
+    conv6 = advanced_activations.ELU()(conv6)
+    conv6 = Convolution2D(256, 3, 3, border_mode='same', init='he_uniform')(conv6)
+    conv6 = BatchNormalization(mode=0, axis=1)(conv6)
+    conv6 = advanced_activations.ELU()(conv6)
+
+    up7 = merge_l([UpSampling2D(size=(2, 2))(conv6), conv3], mode='concat', concat_axis=1)
+    conv7 = Convolution2D(128, 3, 3, border_mode='same', init='he_uniform')(up7)
+    conv7 = BatchNormalization(mode=0, axis=1)(conv7)
+    conv7 = advanced_activations.ELU()(conv7)
+    conv7 = Convolution2D(128, 3, 3, border_mode='same', init='he_uniform')(conv7)
+    conv7 = BatchNormalization(mode=0, axis=1)(conv7)
+    conv7 = advanced_activations.ELU()(conv7)
+
+    up8 = merge_l([UpSampling2D(size=(2, 2))(conv7), conv2], mode='concat', concat_axis=1)
+    conv8 = Convolution2D(64, 3, 3, border_mode='same', init='he_uniform')(up8)
+    conv8 = BatchNormalization(mode=0, axis=1)(conv8)
+    conv8 = advanced_activations.ELU()(conv8)
+    conv8 = Convolution2D(64, 3, 3, border_mode='same', init='he_uniform')(conv8)
+    conv8 = BatchNormalization(mode=0, axis=1)(conv8)
+    conv8 = advanced_activations.ELU()(conv8)
+
+    up9 = merge_l([UpSampling2D(size=(2, 2))(conv8), conv1], mode='concat', concat_axis=1)
+    conv9 = Convolution2D(32, 3, 3, border_mode='same', init='he_uniform')(up9)
+    conv9 = BatchNormalization(mode=0, axis=1)(conv9)
+    conv9 = advanced_activations.ELU()(conv9)
+    conv9 = Convolution2D(32, 3, 3, border_mode='same', init='he_uniform')(conv9)
+    crop9 = Cropping2D(cropping=((16, 16), (16, 16)))(conv9)
+    conv9 = BatchNormalization(mode=0, axis=1)(crop9)
+    conv9 = advanced_activations.ELU()(conv9)
+    conv10 = Convolution2D(1, 1, 1, activation='sigmoid')(conv9)
+    adam = Adam()
+
+    model = Model(input=inputs, output=conv10)
+    model.compile(optimizer=adam,
+                  loss='binary_crossentropy',
+                  metrics=['accuracy', jaccard_coef, jaccard_coef_int])
+
+    return model
+
+
+def get_unet():
+    conv_params = dict(activation='relu', border_mode='same')
+    merge_params = dict(mode='concat', concat_axis=1)
+    inputs = Input((8, 256, 256))
+    conv1 = Convolution2D(32, 3, 3, **conv_params)(inputs)
+    conv1 = Convolution2D(32, 3, 3, **conv_params)(conv1)
+    pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+
+    conv2 = Convolution2D(64, 3, 3, **conv_params)(pool1)
+    conv2 = Convolution2D(64, 3, 3, **conv_params)(conv2)
+    pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
+
+    conv3 = Convolution2D(128, 3, 3, **conv_params)(pool2)
+    conv3 = Convolution2D(128, 3, 3, **conv_params)(conv3)
+    pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
+
+    conv4 = Convolution2D(256, 3, 3, **conv_params)(pool3)
+    conv4 = Convolution2D(256, 3, 3, **conv_params)(conv4)
+    pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
+
+    conv5 = Convolution2D(512, 3, 3, **conv_params)(pool4)
+    conv5 = Convolution2D(512, 3, 3, **conv_params)(conv5)
+
+    up6 = merge_l([UpSampling2D(size=(2, 2))(conv5), conv4], **merge_params)
+    conv6 = Convolution2D(256, 3, 3, **conv_params)(up6)
+    conv6 = Convolution2D(256, 3, 3, **conv_params)(conv6)
+
+    up7 = merge_l([UpSampling2D(size=(2, 2))(conv6), conv3], **merge_params)
+    conv7 = Convolution2D(128, 3, 3, **conv_params)(up7)
+    conv7 = Convolution2D(128, 3, 3, **conv_params)(conv7)
+
+    up8 = merge_l([UpSampling2D(size=(2, 2))(conv7), conv2], **merge_params)
+    conv8 = Convolution2D(64, 3, 3, **conv_params)(up8)
+    conv8 = Convolution2D(64, 3, 3, **conv_params)(conv8)
+
+    up9 = merge_l([UpSampling2D(size=(2, 2))(conv8), conv1], **merge_params)
+    conv9 = Convolution2D(32, 3, 3, **conv_params)(up9)
+    conv9 = Convolution2D(32, 3, 3, **conv_params)(conv9)
+
+    conv10 = Convolution2D(1, 1, 1, activation='sigmoid')(conv9)
+    adam = Adam()
+
+    model = Model(input=inputs, output=conv10)
+    model.compile(optimizer=adam,
+                  loss='binary_crossentropy',
+                  metrics=['accuracy', jaccard_coef, jaccard_coef_int])
+    return model
+
 
 
 def get_unet():
