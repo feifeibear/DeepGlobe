@@ -882,7 +882,8 @@ def get_unet0():
     crop9 = Cropping2D(cropping=((16, 16), (16, 16)))(conv9)
     conv9 = BatchNormalization(mode=0, axis=1)(crop9)
     conv9 = advanced_activations.ELU()(conv9)
-    conv10 = Convolution2D(num_mask_channels, 1, 1, activation='sigmoid')(conv9)
+    conv10 = Convolution2D(1, 1, 1, activation='sigmoid')(conv9)
+    adam = Adam()
 
     model = Model(input=inputs, output=conv10)
     model.compile(optimizer=adam,
@@ -1189,7 +1190,25 @@ def _get_valtrain_mul_data(area_id):
     y_val = y_val.reshape((-1, 1, INPUT_SIZE, INPUT_SIZE))
 
     # fjr data augment
-    if 1:
+    data_agu = 1
+    if data_agu == 1:
+        for i in range(X_val.shape[0]):
+            xb = X_val[i] 
+            yb = y_val[i] 
+            if np.random.random() < 0.5:
+                xb = flip_axis(xb, 1)
+                yb = flip_axis(yb, 1)
+            if np.random.random() < 0.5:
+                xb = flip_axis(xb, 2)
+                yb = flip_axis(yb, 2)
+            if np.random.random() < 0.5:
+                xb = xb.swapaxes(1, 2)
+                yb = yb.swapaxes(1, 2)
+        X_val[i] = xb
+        y_val[i] = yb
+        return X_val, y_val
+
+    else if data_agu == 2:
         X_val_new = []
         y_val_new = []
         for img, label in zip(X_val, y_val):
