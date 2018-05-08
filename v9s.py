@@ -154,9 +154,6 @@ def flip_axis(x, axis):
     x = x.swapaxes(0, axis)
     return x
 
-
-
-
 def directory_name_to_area_id(datapath):
     """
     Directory name to AOI number
@@ -1214,10 +1211,9 @@ def _get_valtrain_mul_data(area_id):
             if np.random.random() < 0.5:
                 xb = xb.swapaxes(1, 2)
                 yb = yb.swapaxes(1, 2)
-        X_val[i] = xb
-        y_val[i] = yb
+            X_val[i] = xb
+            y_val[i] = yb
         return X_val, y_val
-
     else if data_agu == 2:
         X_val_new = []
         y_val_new = []

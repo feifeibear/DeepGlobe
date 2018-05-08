@@ -854,6 +854,7 @@ def generate_valtrain_batch(area_id, batch_size=8, immean=None):
 
                 if immean is not None:
                     X_train = X_train - immean
+                # fjr add data augmentation
                 data_agu = 1
                 if data_agu == 1:
                     for i in range(X_train.shape[0]):
@@ -868,8 +869,8 @@ def generate_valtrain_batch(area_id, batch_size=8, immean=None):
                         if np.random.random() < 0.5:
                             xb = xb.swapaxes(1, 2)
                             yb = yb.swapaxes(1, 2)
-                    X_train[i] = xb
-                    y_train[i] = yb
+                        X_train[i] = xb
+                        y_train[i] = yb
 
 
                 yield (X_train, y_train)
