@@ -1214,7 +1214,7 @@ def _get_valtrain_mul_data(area_id):
             X_val[i] = xb
             y_val[i] = yb
         return X_val, y_val
-    else if data_agu == 2:
+    elif data_agu == 2:
         X_val_new = []
         y_val_new = []
         for img, label in zip(X_val, y_val):
