@@ -25,7 +25,6 @@ import tables as tb
 import pandas as pd
 import numpy as np
 from keras.models import Model
-from keras.layers import merge
 from keras.engine.topology import merge as merge_l
 from keras.layers import (
     Input, Convolution2D, MaxPooling2D,
@@ -859,7 +858,7 @@ def get_unet0():
     conv6 = BatchNormalization(mode=0, axis=1)(conv6)
     conv6 = advanced_activations.ELU()(conv6)
 
-    up7 = merge([UpSampling2D(size=(2, 2))(conv6), conv3], mode='concat', concat_axis=1)
+    up7 = merge_l([UpSampling2D(size=(2, 2))(conv6), conv3], mode='concat', concat_axis=1)
     conv7 = Convolution2D(128, 3, 3, border_mode='same', init='he_uniform')(up7)
     conv7 = BatchNormalization(mode=0, axis=1)(conv7)
     conv7 = advanced_activations.ELU()(conv7)
@@ -867,7 +866,7 @@ def get_unet0():
     conv7 = BatchNormalization(mode=0, axis=1)(conv7)
     conv7 = advanced_activations.ELU()(conv7)
 
-    up8 = merge([UpSampling2D(size=(2, 2))(conv7), conv2], mode='concat', concat_axis=1)
+    up8 = merge_l([UpSampling2D(size=(2, 2))(conv7), conv2], mode='concat', concat_axis=1)
     conv8 = Convolution2D(64, 3, 3, border_mode='same', init='he_uniform')(up8)
     conv8 = BatchNormalization(mode=0, axis=1)(conv8)
     conv8 = advanced_activations.ELU()(conv8)
@@ -875,7 +874,7 @@ def get_unet0():
     conv8 = BatchNormalization(mode=0, axis=1)(conv8)
     conv8 = advanced_activations.ELU()(conv8)
 
-    up9 = merge([UpSampling2D(size=(2, 2))(conv8), conv1], mode='concat', concat_axis=1)
+    up9 = merge_l([UpSampling2D(size=(2, 2))(conv8), conv1], mode='concat', concat_axis=1)
     conv9 = Convolution2D(32, 3, 3, border_mode='same', init='he_uniform')(up9)
     conv9 = BatchNormalization(mode=0, axis=1)(conv9)
     conv9 = advanced_activations.ELU()(conv9)
