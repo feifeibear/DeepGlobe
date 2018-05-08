@@ -25,6 +25,7 @@ import tables as tb
 import pandas as pd
 import numpy as np
 from keras.models import Model
+from keras.layers import merge
 from keras.engine.topology import merge as merge_l
 from keras.layers import (
     Input, Convolution2D, MaxPooling2D,
@@ -810,6 +811,7 @@ def get_unet_bn():
 
 def get_unet0():
     inputs = Input((8, 256, 256))
+    merge_params = dict(mode='concat', concat_axis=1)
     conv1 = Convolution2D(32, 3, 3, border_mode='same', init='he_uniform')(inputs)
     conv1 = BatchNormalization(mode=0, axis=1)(conv1)
     conv1 = advanced_activations.ELU()(conv1)
@@ -849,7 +851,7 @@ def get_unet0():
     conv5 = BatchNormalization(mode=0, axis=1)(conv5)
     conv5 = advanced_activations.ELU()(conv5)
 
-    up6 = merge([UpSampling2D(size=(2, 2))(conv5), conv4], mode='concat', concat_axis=1)
+    up6 = merge_l([UpSampling2D(size=(2, 2))(conv5), conv4], mode='concat', concat_axis=1)
     conv6 = Convolution2D(256, 3, 3, border_mode='same', init='he_uniform')(up6)
     conv6 = BatchNormalization(mode=0, axis=1)(conv6)
     conv6 = advanced_activations.ELU()(conv6)
@@ -1942,7 +1944,8 @@ def evalfscore(datapath):
         df_hist.loc[:, 'epoch'] = list(range(1, len(df_hist) + 1))
 
         rows = []
-        for zero_base_epoch in range(0, len(df_hist)):
+        # fjr start from 1
+        for zero_base_epoch in range(1, len(df_hist)):
             logger.info(">>> Epoch: {}".format(zero_base_epoch))
             _internal_validate_fscore_wo_pred_file(
                 area_id,
