@@ -1296,7 +1296,7 @@ def _internal_test_predict_best_param(area_id,
     fn = FMT_TESTPRED_PATH.format(prefix)
     fn_model = FMT_VALMODEL_PATH.format(prefix + '_{epoch:02d}')
     fn_model = fn_model.format(epoch=epoch)
-    model = get_unet0()
+    model = get_unet_bn()
     model.load_weights(fn_model)
 
     fn_test = FMT_TEST_IMAGELIST_PATH.format(prefix=prefix)
@@ -1381,7 +1381,7 @@ def validate_score(area_id):
 
         # Load model weights
         # Predict and Save prediction result
-        model = get_unet0()
+        model = get_unet_bn()
         model.load_weights(FMT_VALMODEL_PATH.format(prefix))
         y_pred = model.predict(X_val - X_mean, batch_size=8, verbose=1)
         del model
@@ -1660,7 +1660,7 @@ def predict(area_id):
 
     # Load model weights
     # Predict and Save prediction result
-    model = get_unet0()
+    model = get_unet_bn()
     model.load_weights(FMT_VALMODEL_PATH.format(prefix))
     y_pred = model.predict(X_test - X_mean, batch_size=8, verbose=1)
     del model
@@ -1699,7 +1699,7 @@ def _internal_validate_predict(area_id,
     # Predict and Save prediction result
     fn_model = FMT_VALMODEL_PATH.format(prefix + '_{epoch:02d}')
     fn_model = fn_model.format(epoch=epoch)
-    model = get_unet0()
+    model = get_unet_bn()
     model.load_weights(fn_model)
 
     fn_test = FMT_VALTEST_IMAGELIST_PATH.format(prefix=prefix)
@@ -1896,7 +1896,7 @@ def validate(datapath):
     X_trn, y_trn = _get_valtrain_mul_data(area_id)
     X_trn = X_trn - X_mean
 
-    model = get_unet0()
+    model = get_unet_bn()
 
     # load weights here
     is_load_weights = False

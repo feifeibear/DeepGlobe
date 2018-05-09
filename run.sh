@@ -3,7 +3,7 @@ set -x
 set -e
 
 export CUDA_VISIBLE_DEVICES=0
-export MODEL="AOI_4_Shanghai"
+export MODEL="AOI_3_Paris"
 
 export RUN_TRAIN=1
 export RUN_TEST=1
@@ -15,6 +15,7 @@ export FIT_BATCH_SIZE=8
 export PRED_BATCH_SIZE=8
 
 #-=-=-=-=-=-=-=-= No need to modify -=-=-=-=-=-=-=-=-=--=-=-
+export PROJ_BASE_PATH="/root"
 TRAIN_PATH=/root/data/train/${MODEL}_Train
 TEST_PATH=/root/data/test/${MODEL}_Test_public
 
@@ -45,11 +46,11 @@ if [[ $RUN_TRAIN -eq 1 ]]; then
   python /root/code/v9s.py evalfscore $TRAIN_PATH || exit 1
 
   ### v13 --------------
-  echo ">>>>>>>>>> v13.py: Training for v13 model"
-  python /root/code/v13.py validate $TRAIN_PATH  || exit 1
+  #echo ">>>>>>>>>> v13.py: Training for v13 model"
+  #python /root/code/v13.py validate $TRAIN_PATH  || exit 1
 
-  echo ">>>>>>>>>> v13.py: Parametr optimization for v13 model"
-  python /root/code/v13.py evalfscore $TRAIN_PATH || exit 1
+  #echo ">>>>>>>>>> v13.py: Parametr optimization for v13 model"
+  #python /root/code/v13.py evalfscore $TRAIN_PATH || exit 1
 
   ### v16 --------------
   #echo ">>>>>>>>>> v16.py"
