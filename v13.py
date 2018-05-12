@@ -900,7 +900,7 @@ def generate_valtrain_batch(area_id, batch_size=8, immean=None):
                         y_val_new.append(np.copy(label))
                     X_val_new = np.array(X_val_new)
                     y_val_new = np.array(y_val_new)
-                    return X_val_new, y_val_new
+                    yield (X_val_new, y_val_new)
 
 
 def get_unet_bn():
