@@ -855,7 +855,7 @@ def generate_valtrain_batch(area_id, batch_size=8, immean=None):
                 if immean is not None:
                     X_train = X_train - immean
                 # fjr add data augmentation
-                data_agu = 1
+                data_agu = 2 
                 if data_agu == 1:
                     for i in range(X_train.shape[0]):
                         xb = X_train[i] 
@@ -871,9 +871,37 @@ def generate_valtrain_batch(area_id, batch_size=8, immean=None):
                             yb = yb.swapaxes(1, 2)
                         X_train[i] = xb
                         y_train[i] = yb
+                    yield (X_train, y_train)
+                elif data_agu == 2:
+                    X_val_new = []
+                    y_val_new = []
+                    for img, label in zip(X_train, y_train):
+                        img_org = np.copy(img)
+                        label_org = np.copy(label)
+                        X_val_new.append(np.copy(img))
+                        y_val_new.append(np.copy(label))
+                        for idx in range(len(img_org)):
+                            img[idx] = np.fliplr(img_org[idx])
+                        for idx in range(len(label_org)):
+                            label[idx] = np.fliplr(label_org[idx])
+                        X_val_new.append(np.copy(img))
+                        y_val_new.append(np.copy(label))
+                        for idx in range(len(img_org)):
+                            img[idx] = np.flipud(img_org[idx])
+                        for idx in range(len(label_org)):
+                            label[idx] = np.flipud(label_org[idx])
+                        X_val_new.append(np.copy(img))
+                        y_val_new.append(np.copy(label))
+                        for idx in range(len(img_org)):
+                            img[idx] = np.fliplr(np.flipud(img_org[idx]))
+                        for idx in range(len(label_org)):
+                            label[idx] = np.fliplr(np.flipud(label_org[idx]))
+                        X_val_new.append(np.copy(img))
+                        y_val_new.append(np.copy(label))
+                    X_val_new = np.array(X_val_new)
+                    y_val_new = np.array(y_val_new)
+                    return X_val_new, y_val_new
 
-
-                yield (X_train, y_train)
 
 def get_unet_bn():
     conv_params = dict(bias=False, border_mode='same', dim_ordering='th')
